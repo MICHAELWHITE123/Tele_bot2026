@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.google_sheets import get_sheets_client
@@ -738,10 +738,12 @@ async def webapp(request: Request):
     # Replace placeholder with actual base_url
     html_content = html_template.replace('BASE_URL_PLACEHOLDER', base_url)
     
-    # Encode to bytes and return Response without explicit Content-Length
-    # Let Starlette calculate it automatically
-    html_bytes = html_content.encode('utf-8')
-    return Response(
-        content=html_bytes,
+    # Use StreamingResponse with chunked encoding to avoid Content-Length issues
+    # This is the most reliable solution for large HTML content
+    async def generate_html():
+        yield html_content.encode('utf-8')
+    
+    return StreamingResponse(
+        generate_html(),
         media_type="text/html; charset=utf-8"
     )
