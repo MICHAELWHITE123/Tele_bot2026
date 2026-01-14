@@ -176,14 +176,25 @@ async def cmd_start(message: types.Message):
     """Handle /start command."""
     webapp_url = config.get_webapp_url()
     
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📷 Открыть сканер QR", web_app=WebAppInfo(url=webapp_url))]
-    ])
+    if webapp_url:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📷 Открыть сканер QR", web_app=WebAppInfo(url=webapp_url))]
+        ])
+        text = (
+            "🏭 <b>Warehouse Bot</b>\n\n"
+            "Откройте WebApp для сканирования QR-кода и управления оборудованием.\n"
+            "Или отправьте inventory_id текстовым сообщением."
+        )
+    else:
+        keyboard = None
+        text = (
+            "🏭 <b>Warehouse Bot</b>\n\n"
+            "Отправьте inventory_id текстовым сообщением для поиска оборудования.\n\n"
+            "⚠️ WebApp недоступен: не настроен RAILWAY_PUBLIC_DOMAIN или RAILWAY_STATIC_URL."
+        )
     
     await message.answer(
-        "🏭 <b>Warehouse Bot</b>\n\n"
-        "Откройте WebApp для сканирования QR-кода и управления оборудованием.\n"
-        "Или отправьте inventory_id текстовым сообщением.",
+        text,
         parse_mode="HTML",
         reply_markup=keyboard
     )

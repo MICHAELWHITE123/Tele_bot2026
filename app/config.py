@@ -18,19 +18,27 @@ class Config:
         return cls.RAILWAY_ENV == "production"
     
     @classmethod
-    def get_webapp_url(cls) -> str:
-        """Get webapp URL based on environment."""
-        if cls.is_production():
-            # Try Railway public domain first
-            if cls.RAILWAY_PUBLIC_DOMAIN:
-                return f"https://{cls.RAILWAY_PUBLIC_DOMAIN}/webapp"
-            # Try Railway static URL
-            if cls.RAILWAY_STATIC_URL:
-                return f"{cls.RAILWAY_STATIC_URL}/webapp"
-            # Fallback - user needs to set RAILWAY_PUBLIC_DOMAIN
-            return "https://your-app-name.up.railway.app/webapp"
-        else:
-            return "http://localhost:8000/webapp"
+    def get_webapp_url(cls) -> str | None:
+        """Get webapp URL based on environment. Always returns HTTPS for production. Returns None if not configured."""
+        # Check if we have Railway domain (production)
+        if cls.RAILWAY_PUBLIC_DOMAIN:
+            # Ensure HTTPS
+            domain = cls.RAILWAY_PUBLIC_DOMAIN
+            if not domain.startswith('http'):
+                domain = f"https://{domain}"
+            return f"{domain}/webapp"
+        
+        if cls.RAILWAY_STATIC_URL:
+            # Ensure HTTPS
+            url = cls.RAILWAY_STATIC_URL
+            if url.startswith('http://'):
+                url = url.replace('http://', 'https://')
+            elif not url.startswith('http'):
+                url = f"https://{url}"
+            return f"{url}/webapp"
+        
+        # No URL configured - return None (bot will work without WebApp button)
+        return None
 
 
 config = Config()
