@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel
-from io import BytesIO
 
 from app.google_sheets import get_sheets_client
 
@@ -739,29 +738,6 @@ async def webapp(request: Request):
     # Replace placeholder with actual base_url
     html_content = html_template.replace('BASE_URL_PLACEHOLDER', base_url)
     
-    # Use StreamingResponse with BytesIO to avoid Content-Length calculation issues
-    # This approach forces chunked transfer encoding
-    html_bytes = html_content.encode('utf-8')
-    html_stream = BytesIO(html_bytes)
-    
-    async def generate():
-        html_stream.seek(0)
-        while True:
-            chunk = html_stream.read(8192)  # 8KB chunks
-            if not chunk:
-                break
-            yield chunk
-    
-    response = StreamingResponse(
-        generate(),
-        media_type="text/html; charset=utf-8"
-    )
-    # Ensure no Content-Length header is set
-    # Use try/except for compatibility with MutableHeaders
-    try:
-        if "content-length" in response.headers:
-            del response.headers["content-length"]
-    except (KeyError, AttributeError):
-        pass
-    
-    return response
+    # Use HTMLResponse for static HTML content
+    # This automatically handles Content-Length correctly
+    return HTMLResponse(content=html_content)
