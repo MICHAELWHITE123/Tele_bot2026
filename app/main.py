@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.google_sheets import get_sheets_client
@@ -738,9 +738,31 @@ async def webapp(request: Request):
     # Replace placeholder with actual base_url
     html_content = html_template.replace('BASE_URL_PLACEHOLDER', base_url)
     
-    # Use Response with bytes content - FastAPI will handle Content-Length correctly
-    # Encoding to bytes ensures proper size calculation
-    return Response(
-        content=html_content.encode('utf-8'),
+    # Use StreamingResponse with chunked transfer encoding
+    # This completely avoids Content-Length header issues
+    html_bytes = html_content.encode('utf-8')
+    
+    async def generate():
+        # Yield content in chunks to force chunked transfer encoding
+        # This prevents Content-Length from being set
+        chunk_size = 8192
+        for i in range(0, len(html_bytes), chunk_size):
+            yield html_bytes[i:i + chunk_size]
+    
+    response = StreamingResponse(
+        generate(),
         media_type="text/html; charset=utf-8"
     )
+    
+    # Remove Content-Length header if present (StreamingResponse uses chunked encoding)
+    # MutableHeaders supports deletion via del, but we need to check first
+    try:
+        # Try to get the header to see if it exists
+        if "content-length" in response.headers:
+            # Use __delitem__ which is supported by MutableHeaders
+            response.headers.__delitem__("content-length")
+    except (KeyError, AttributeError):
+        # Header doesn't exist or can't be deleted - that's fine
+        pass
+    
+    return response
