@@ -1,13 +1,43 @@
+from contextlib import asynccontextmanager
+import asyncio
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 
 from app.google_sheets import get_sheets_client
+from app.bot import start_polling
+
+
+# Global variable to store bot task
+bot_task = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for FastAPI app lifecycle."""
+    global bot_task
+    
+    # Startup: Start Telegram bot as background task
+    print("Starting Telegram bot as background task...", flush=True)
+    bot_task = asyncio.create_task(start_polling())
+    
+    yield
+    
+    # Shutdown: Cancel bot task
+    print("Shutting down Telegram bot...", flush=True)
+    if bot_task:
+        bot_task.cancel()
+        try:
+            await bot_task
+        except asyncio.CancelledError:
+            pass
+
 
 app = FastAPI(
     title="Warehouse Bot WebApp API",
     description="REST API for managing warehouse items and labels in Google Sheets",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 
@@ -142,9 +172,7 @@ async def webapp(request: Request):
     """WebApp interface for QR scanning and item management."""
     base_url = str(request.base_url).rstrip("/")
     
-    # Use template string and replace to avoid f-string escaping issues
-    html_template = """
-<!DOCTYPE html>
+    html_template = """<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -152,12 +180,7 @@ async def webapp(request: Request):
     <title>Warehouse Scanner</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        * {{
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }}
-        
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: var(--tg-theme-bg-color, #ffffff);
@@ -166,29 +189,10 @@ async def webapp(request: Request):
             padding: 16px;
             padding-bottom: 80px;
         }}
-        
-        .container {{
-            max-width: 600px;
-            margin: 0 auto;
-        }}
-        
-        .header {{
-            text-align: center;
-            margin-bottom: 24px;
-        }}
-        
-        .header h1 {{
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--tg-theme-text-color, #000000);
-            margin-bottom: 8px;
-        }}
-        
-        .header p {{
-            font-size: 14px;
-            color: var(--tg-theme-hint-color, #999999);
-        }}
-        
+        .container {{ max-width: 600px; margin: 0 auto; }}
+        .header {{ text-align: center; margin-bottom: 24px; }}
+        .header h1 {{ font-size: 24px; font-weight: 600; color: var(--tg-theme-text-color, #000000); margin-bottom: 8px; }}
+        .header p {{ font-size: 14px; color: var(--tg-theme-hint-color, #999999); }}
         .scan-section {{
             background: var(--tg-theme-secondary-bg-color, #f0f0f0);
             border-radius: 16px;
@@ -196,13 +200,7 @@ async def webapp(request: Request):
             margin-bottom: 24px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }}
-        
-        .input-group {{
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-        }}
-        
+        .input-group {{ display: flex; gap: 8px; margin-bottom: 12px; }}
         .input-group input {{
             flex: 1;
             padding: 14px 16px;
@@ -214,11 +212,7 @@ async def webapp(request: Request):
             outline: none;
             transition: border-color 0.2s;
         }}
-        
-        .input-group input:focus {{
-            border-color: var(--tg-theme-button-color, #3390ec);
-        }}
-        
+        .input-group input:focus {{ border-color: var(--tg-theme-button-color, #3390ec); }}
         .btn {{
             padding: 14px 24px;
             font-size: 16px;
@@ -232,41 +226,19 @@ async def webapp(request: Request):
             justify-content: center;
             gap: 8px;
         }}
-        
         .btn-primary {{
             background: var(--tg-theme-button-color, #3390ec);
             color: var(--tg-theme-button-text-color, #ffffff);
         }}
-        
-        .btn-primary:active {{
-            opacity: 0.8;
-            transform: scale(0.98);
-        }}
-        
+        .btn-primary:active {{ opacity: 0.8; transform: scale(0.98); }}
         .btn-secondary {{
             background: var(--tg-theme-secondary-bg-color, #f0f0f0);
             color: var(--tg-theme-text-color, #000000);
         }}
-        
-        .btn-secondary:active {{
-            opacity: 0.8;
-        }}
-        
-        .btn-success {{
-            background: #4caf50;
-            color: #ffffff;
-        }}
-        
-        .btn-danger {{
-            background: #f44336;
-            color: #ffffff;
-        }}
-        
-        .btn:disabled {{
-            opacity: 0.5;
-            cursor: not-allowed;
-        }}
-        
+        .btn-secondary:active {{ opacity: 0.8; }}
+        .btn-success {{ background: #4caf50; color: #ffffff; }}
+        .btn-danger {{ background: #f44336; color: #ffffff; }}
+        .btn:disabled {{ opacity: 0.5; cursor: not-allowed; }}
         .item-card {{
             background: var(--tg-theme-secondary-bg-color, #f0f0f0);
             border-radius: 16px;
@@ -275,23 +247,11 @@ async def webapp(request: Request):
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             display: none;
         }}
-        
-        .item-card.show {{
-            display: block;
-            animation: slideIn 0.3s ease-out;
-        }}
-        
+        .item-card.show {{ display: block; animation: slideIn 0.3s ease-out; }}
         @keyframes slideIn {{
-            from {{
-                opacity: 0;
-                transform: translateY(-10px);
-            }}
-            to {{
-                opacity: 1;
-                transform: translateY(0);
-            }}
+            from {{ opacity: 0; transform: translateY(-10px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
         }}
-        
         .item-header {{
             display: flex;
             align-items: center;
@@ -300,51 +260,24 @@ async def webapp(request: Request):
             padding-bottom: 12px;
             border-bottom: 2px solid var(--tg-theme-hint-color, #e0e0e0);
         }}
-        
-        .item-title {{
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--tg-theme-text-color, #000000);
-        }}
-        
+        .item-title {{ font-size: 20px; font-weight: 600; color: var(--tg-theme-text-color, #000000); }}
         .item-status {{
             padding: 6px 12px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
         }}
-        
-        .item-status.checked {{
-            background: #4caf50;
-            color: #ffffff;
-        }}
-        
-        .item-status.unchecked {{
-            background: #ff9800;
-            color: #ffffff;
-        }}
-        
-        .item-info {{
-            margin-bottom: 16px;
-        }}
-        
+        .item-status.checked {{ background: #4caf50; color: #ffffff; }}
+        .item-status.unchecked {{ background: #ff9800; color: #ffffff; }}
+        .item-info {{ margin-bottom: 16px; }}
         .info-row {{
             display: flex;
             justify-content: space-between;
             padding: 12px 0;
             border-bottom: 1px solid var(--tg-theme-hint-color, #e0e0e0);
         }}
-        
-        .info-row:last-child {{
-            border-bottom: none;
-        }}
-        
-        .info-label {{
-            font-size: 14px;
-            color: var(--tg-theme-hint-color, #999999);
-            font-weight: 500;
-        }}
-        
+        .info-row:last-child {{ border-bottom: none; }}
+        .info-label {{ font-size: 14px; color: var(--tg-theme-hint-color, #999999); font-weight: 500; }}
         .info-value {{
             font-size: 14px;
             color: var(--tg-theme-text-color, #000000);
@@ -353,17 +286,8 @@ async def webapp(request: Request):
             max-width: 60%;
             word-break: break-word;
         }}
-        
-        .item-actions {{
-            display: flex;
-            gap: 12px;
-            margin-top: 16px;
-        }}
-        
-        .item-actions .btn {{
-            flex: 1;
-        }}
-        
+        .item-actions {{ display: flex; gap: 12px; margin-top: 16px; }}
+        .item-actions .btn {{ flex: 1; }}
         .status-message {{
             padding: 12px 16px;
             border-radius: 12px;
@@ -373,32 +297,14 @@ async def webapp(request: Request):
             font-weight: 500;
             display: none;
         }}
-        
-        .status-message.show {{
-            display: block;
-            animation: fadeIn 0.3s ease-out;
-        }}
-        
+        .status-message.show {{ display: block; animation: fadeIn 0.3s ease-out; }}
         @keyframes fadeIn {{
             from {{ opacity: 0; }}
             to {{ opacity: 1; }}
         }}
-        
-        .status-message.success {{
-            background: #e8f5e9;
-            color: #2e7d32;
-        }}
-        
-        .status-message.error {{
-            background: #ffebee;
-            color: #c62828;
-        }}
-        
-        .status-message.loading {{
-            background: #e3f2fd;
-            color: #1565c0;
-        }}
-        
+        .status-message.success {{ background: #e8f5e9; color: #2e7d32; }}
+        .status-message.error {{ background: #ffebee; color: #c62828; }}
+        .status-message.loading {{ background: #e3f2fd; color: #1565c0; }}
         .loading-spinner {{
             display: inline-block;
             width: 16px;
@@ -409,25 +315,14 @@ async def webapp(request: Request):
             animation: spin 0.8s linear infinite;
             margin-right: 8px;
         }}
-        
-        @keyframes spin {{
-            to {{ transform: rotate(360deg); }}
-        }}
-        
+        @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
         .empty-state {{
             text-align: center;
             padding: 40px 20px;
             color: var(--tg-theme-hint-color, #999999);
         }}
-        
-        .empty-state-icon {{
-            font-size: 48px;
-            margin-bottom: 16px;
-        }}
-        
-        .empty-state-text {{
-            font-size: 16px;
-        }}
+        .empty-state-icon {{ font-size: 48px; margin-bottom: 16px; }}
+        .empty-state-text {{ font-size: 16px; }}
     </style>
 </head>
 <body>
@@ -495,7 +390,7 @@ async def webapp(request: Request):
         tg.ready();
         tg.expand();
         
-        const API_BASE_URL = 'BASE_URL_PLACEHOLDER';
+        const API_BASE_URL = '{base_url}';
         let currentItem = null;
         
         console.log('WebApp initialized. API_BASE_URL:', API_BASE_URL);
@@ -701,7 +596,6 @@ async def webapp(request: Request):
             }}
         }});
         
-        // Проверка доступности API при загрузке
         async function checkAPI() {{
             try {{
                 const response = await fetch(`${{API_BASE_URL}}/health`);
@@ -716,9 +610,7 @@ async def webapp(request: Request):
             }}
         }}
         
-        // Автоматически предлагаем сканировать QR при открытии WebApp
         if (tg.platform !== 'unknown') {{
-            // Небольшая задержка для лучшего UX
             setTimeout(() => {{
                 const firstTime = !localStorage.getItem('webapp_opened');
                 if (firstTime) {{
@@ -732,37 +624,7 @@ async def webapp(request: Request):
         }}
     </script>
 </body>
-</html>
-"""
+</html>"""
     
-    # Replace placeholder with actual base_url
-    html_content = html_template.replace('BASE_URL_PLACEHOLDER', base_url)
-    
-    # Use StreamingResponse with chunked transfer encoding
-    # This completely avoids Content-Length header issues
-    html_bytes = html_content.encode('utf-8')
-    
-    async def generate():
-        # Yield content in chunks to force chunked transfer encoding
-        # This prevents Content-Length from being set
-        chunk_size = 8192
-        for i in range(0, len(html_bytes), chunk_size):
-            yield html_bytes[i:i + chunk_size]
-    
-    response = StreamingResponse(
-        generate(),
-        media_type="text/html; charset=utf-8"
-    )
-    
-    # Remove Content-Length header if present (StreamingResponse uses chunked encoding)
-    # MutableHeaders supports deletion via del, but we need to check first
-    try:
-        # Try to get the header to see if it exists
-        if "content-length" in response.headers:
-            # Use __delitem__ which is supported by MutableHeaders
-            response.headers.__delitem__("content-length")
-    except (KeyError, AttributeError):
-        # Header doesn't exist or can't be deleted - that's fine
-        pass
-    
-    return response
+    html_content = html_template.format(base_url=base_url)
+    return HTMLResponse(content=html_content)
