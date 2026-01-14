@@ -1,4 +1,5 @@
 import os
+import json
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
@@ -11,18 +12,26 @@ class GoogleSheetsClient:
 
     def __init__(self) -> None:
         """Initialize client using service account from env variable."""
-        service_account_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+        service_account_data = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
         spreadsheet_id = os.getenv("GOOGLE_SPREADSHEET_ID", "")
 
-        if not service_account_path:
+        if not service_account_data:
             raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON env variable not set")
         if not spreadsheet_id:
             raise ValueError("GOOGLE_SPREADSHEET_ID env variable not set")
 
         self._spreadsheet_id = spreadsheet_id
-        self._credentials = Credentials.from_service_account_file(
-            service_account_path, scopes=SCOPES
-        )
+        
+        try:
+            service_account_json = json.loads(service_account_data)
+            self._credentials = Credentials.from_service_account_info(
+                service_account_json, scopes=SCOPES
+            )
+        except (json.JSONDecodeError, TypeError):
+            self._credentials = Credentials.from_service_account_file(
+                service_account_data, scopes=SCOPES
+            )
+        
         self._service = build("sheets", "v4", credentials=self._credentials)
         self._sheets = self._service.spreadsheets()
 
