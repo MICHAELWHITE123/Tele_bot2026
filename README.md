@@ -120,8 +120,12 @@ git push -u origin main
 | `TELEGRAM_BOT_TOKEN` | Токен Telegram бота | `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | JSON содержимое service account файла (не путь!) | `{"type":"service_account","project_id":"..."}` |
 | `GOOGLE_SPREADSHEET_ID` | ID Google таблицы | `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms` |
-| `PORT` | Порт приложения (Railway устанавливает автоматически) | `8000` |
 | `RAILWAY_ENV` | Окружение (production для Railway) | `production` |
+| `RAILWAY_PUBLIC_DOMAIN` | Публичный домен Railway (опционально, можно получить из Settings → Domains) | `your-app.up.railway.app` |
+
+**Примечания:**
+- `PORT` - Railway устанавливает автоматически, **не нужно** добавлять вручную
+- `RAILWAY_PUBLIC_DOMAIN` - Railway может установить автоматически, но если webapp не работает, добавьте вручную из Settings → Domains
 
 **Важно для `GOOGLE_SERVICE_ACCOUNT_JSON`:**
 
@@ -149,13 +153,15 @@ https://your-app-name.up.railway.app
 
 ### 6. Настройка Telegram WebApp
 
-В коде бота (`app/bot.py`) обновите URL WebApp для production:
+После деплоя получите публичный домен Railway:
 
-```python
-webapp_url = f"https://your-app-name.up.railway.app/webapp"
-```
+1. В Railway перейдите в **Settings → Domains**
+2. Скопируйте домен (например: `your-app.up.railway.app`)
+3. Добавьте переменную окружения `RAILWAY_PUBLIC_DOMAIN` со значением домена
 
-Или используйте переменную окружения `RAILWAY_PUBLIC_DOMAIN` (если доступна).
+Или Railway может установить `RAILWAY_PUBLIC_DOMAIN` автоматически. Код бота автоматически использует этот домен для webapp.
+
+**Проверка:** После настройки отправьте `/start` боту - кнопка "Open QR Scanner" должна открывать webapp.
 
 ## Проверка деплоя
 

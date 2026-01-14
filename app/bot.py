@@ -174,7 +174,7 @@ async def mark_label(row_index: int) -> tuple[bool, str]:
 @router.message(CommandStart())
 async def cmd_start(message: types.Message):
     """Handle /start command."""
-    webapp_url = f"https://{config.RAILWAY_ENV}.up.railway.app/webapp" if config.is_production() else "http://localhost:8000/webapp"
+    webapp_url = config.get_webapp_url()
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📷 Open QR Scanner", web_app=WebAppInfo(url=webapp_url))]
