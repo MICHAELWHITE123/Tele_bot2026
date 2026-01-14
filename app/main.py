@@ -137,12 +137,12 @@ async def uncheck_item(request: CheckRequest):
         )
 
 
-@app.get("/webapp")
+@app.get("/webapp", response_class=HTMLResponse)
 async def webapp(request: Request):
     """WebApp interface for QR scanning and item management."""
     base_url = str(request.base_url).rstrip("/")
     
-    html_content = f"""
+    html_content = """
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -494,7 +494,7 @@ async def webapp(request: Request):
         tg.ready();
         tg.expand();
         
-        const API_BASE_URL = '{base_url}';
+        const API_BASE_URL = 'BASE_URL_PLACEHOLDER';
         let currentItem = null;
         
         console.log('WebApp initialized. API_BASE_URL:', API_BASE_URL);
@@ -733,5 +733,8 @@ async def webapp(request: Request):
 </body>
 </html>
 """
+    # Replace placeholder with actual base_url
+    html_content = html_content.replace('BASE_URL_PLACEHOLDER', base_url)
+    
     # Return HTML response - Starlette will handle Content-Length automatically
     return HTMLResponse(content=html_content)
