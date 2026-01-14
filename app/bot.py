@@ -1,5 +1,5 @@
 import asyncio
-from aiogram import Bot, Dispatcher, Router, types
+from aiogram import Bot, Dispatcher, Router, types, F
 from aiogram.filters import CommandStart
 from aiogram.types import WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -107,8 +107,8 @@ WEBAPP_HTML = """
 """
 
 
-async def find_row_by_inventory_id(inventory_id: str) -> int | None:
-    """Find row index by inventory_id in column K. Returns 1-based row index or None."""
+async def find_row_by_inventory_id(inventory_id: str) -> tuple[int, str, str] | None:
+    """Find row index by inventory_id in column K. Returns (1-based index, equipment name from B, storage location from V) or None."""
     client = get_sheets_client()
     result = client.get_items_sheet().execute()
     rows = result.get("values", [])
@@ -117,7 +117,9 @@ async def find_row_by_inventory_id(inventory_id: str) -> int | None:
         if len(row) > 10:
             cell_k = row[10]
             if str(cell_k).strip() == str(inventory_id).strip():
-                return idx + 1
+                equipment_name = row[1] if len(row) > 1 else "N/A"
+                storage_location = row[21] if len(row) > 21 else "N/A"
+                return (idx + 1, equipment_name, storage_location)
     return None
 
 
@@ -138,19 +140,35 @@ async def update_column_t(row_index: int) -> bool:
     return True
 
 
-async def process_qr_code(inventory_id: str) -> tuple[bool, str]:
-    """Process QR code: find row and update column T. Returns (success, message)."""
+async def get_item_info(inventory_id: str) -> tuple[bool, str, int | None]:
+    """Get item information by inventory_id. Returns (success, message, row_index)."""
     try:
-        row_index = await find_row_by_inventory_id(inventory_id)
+        result = await find_row_by_inventory_id(inventory_id)
         
-        if row_index is None:
-            return False, f"❌ Item not found: {inventory_id}"
+        if result is None:
+            return False, f"❌ Item not found: {inventory_id}", None
         
-        await update_column_t(row_index)
-        return True, f"✅ Label marked for inventory_id: {inventory_id} (row {row_index})"
+        row_index, equipment_name, storage_location = result
+        
+        message = (
+            f"📦 <b>Equipment:</b> {equipment_name}\n"
+            f"📍 <b>Storage location:</b> {storage_location}\n"
+            f"🆔 <b>Inventory ID:</b> {inventory_id}\n"
+            f"📊 <b>Row:</b> {row_index}"
+        )
+        return True, message, row_index
     
     except Exception as e:
-        return False, f"❌ Error processing: {str(e)}"
+        return False, f"❌ Error processing: {str(e)}", None
+
+
+async def mark_label(row_index: int) -> tuple[bool, str]:
+    """Mark label in column T for specified row. Returns (success, message)."""
+    try:
+        await update_column_t(row_index)
+        return True, "✅ Label marked in table"
+    except Exception as e:
+        return False, f"❌ Error marking: {str(e)}"
 
 
 @router.message(CommandStart())
@@ -185,8 +203,38 @@ async def handle_message(message: types.Message):
     
     await message.answer(f"🔍 Searching for: {inventory_id}...")
     
-    success, response_message = await process_qr_code(inventory_id)
-    await message.answer(response_message)
+    success, info_message, row_index = await get_item_info(inventory_id)
+    
+    if not success:
+        await message.answer(info_message)
+        return
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Mark label", callback_data=f"mark_{row_index}")]
+    ])
+    
+    await message.answer(info_message, parse_mode="HTML", reply_markup=keyboard)
+
+
+@router.callback_query(F.data.startswith("mark_"))
+async def handle_mark_callback(callback: types.CallbackQuery):
+    """Handle 'Mark label' button click."""
+    try:
+        row_index = int(callback.data.split("_")[1])
+        
+        success, result_message = await mark_label(row_index)
+        
+        if success:
+            await callback.answer("✅ Label marked!")
+            await callback.message.edit_text(
+                callback.message.text + f"\n\n{result_message}",
+                parse_mode="HTML"
+            )
+        else:
+            await callback.answer(result_message, show_alert=True)
+    
+    except Exception as e:
+        await callback.answer(f"❌ Error: {str(e)}", show_alert=True)
 
 
 bot: Bot | None = None
