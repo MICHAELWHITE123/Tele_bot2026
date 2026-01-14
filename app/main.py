@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, Response
 from pydantic import BaseModel
 
 from app.google_sheets import get_sheets_client
@@ -137,7 +137,7 @@ async def uncheck_item(request: CheckRequest):
         )
 
 
-@app.get("/webapp", response_class=HTMLResponse)
+@app.get("/webapp")
 async def webapp(request: Request):
     """WebApp interface for QR scanning and item management."""
     base_url = str(request.base_url).rstrip("/")
@@ -735,5 +735,10 @@ async def webapp(request: Request):
 </html>
 """
     
-    # Return HTML response - Starlette will handle Content-Length automatically
-    return HTMLResponse(content=html_content)
+    # Encode content to bytes to ensure proper Content-Length calculation
+    html_bytes = html_content.encode('utf-8')
+    return Response(
+        content=html_bytes,
+        media_type="text/html; charset=utf-8",
+        headers={"Content-Length": str(len(html_bytes))}
+    )
