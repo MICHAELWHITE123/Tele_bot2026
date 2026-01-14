@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 import asyncio
 from pathlib import Path
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
 from pydantic import BaseModel
 
 from app.google_sheets import get_sheets_client
@@ -153,23 +153,11 @@ async def uncheck_item(request: CheckRequest):
         )
 
 
-def html_generator(html_bytes: bytes):
-    chunk_size = 8192
-    for i in range(0, len(html_bytes), chunk_size):
-        yield html_bytes[i:i + chunk_size]
-
-
-@app.get("/webapp")
+@app.get("/webapp", response_class=HTMLResponse)
 async def webapp():
-    return StreamingResponse(
-        html_generator(webapp_html_bytes),
-        media_type="text/html; charset=utf-8"
-    )
+    return HTMLResponse(content=webapp_html_bytes.decode('utf-8'))
 
 
-@app.get("/info")
+@app.get("/info", response_class=HTMLResponse)
 async def info():
-    return StreamingResponse(
-        html_generator(info_html_bytes),
-        media_type="text/html; charset=utf-8"
-    )
+    return HTMLResponse(content=info_html_bytes.decode('utf-8'))
