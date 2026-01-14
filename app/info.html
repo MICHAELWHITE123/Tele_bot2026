@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Информация об оборудовании</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            min-height: 100vh;
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 24px; }
+        .header h1 { font-size: 24px; font-weight: 600; color: var(--tg-theme-text-color, #000000); margin-bottom: 8px; }
+        .item-card {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--tg-theme-hint-color, #e0e0e0);
+        }
+        .item-title { font-size: 20px; font-weight: 600; color: var(--tg-theme-text-color, #000000); }
+        .item-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .item-status.checked { background: #4caf50; color: #ffffff; }
+        .item-status.unchecked { background: #ff9800; color: #ffffff; }
+        .item-info { margin-bottom: 16px; }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--tg-theme-hint-color, #e0e0e0);
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { font-size: 14px; color: var(--tg-theme-hint-color, #999999); font-weight: 500; }
+        .info-value {
+            font-size: 14px;
+            color: var(--tg-theme-text-color, #000000);
+            font-weight: 600;
+            text-align: right;
+            max-width: 60%;
+            word-break: break-word;
+        }
+        .item-actions { display: flex; gap: 12px; margin-top: 16px; }
+        .item-actions .btn { flex: 1; }
+        .btn {
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-success { background: #4caf50; color: #ffffff; }
+        .btn-danger { background: #f44336; color: #ffffff; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:active { opacity: 0.8; }
+        .status-message {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-top: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            display: none;
+        }
+        .status-message.show { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .status-message.success { background: #e8f5e9; color: #2e7d32; }
+        .status-message.error { background: #ffebee; color: #c62828; }
+        .status-message.loading { background: #e3f2fd; color: #1565c0; }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 16px;
+            color: var(--tg-theme-button-color, #3390ec);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-link:hover { text-decoration: underline; }
+        .error-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--tg-theme-hint-color, #999999);
+        }
+        .error-state-icon { font-size: 48px; margin-bottom: 16px; }
+        .error-state-text { font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/webapp" class="back-link">← Назад к сканеру</a>
+        <div class="header">
+            <h1>📦 Информация об оборудовании</h1>
+        </div>
+        
+        <div id="loadingState" class="status-message show loading">
+            Загрузка информации...
+        </div>
+        
+        <div id="itemCard" class="item-card" style="display: none;">
+            <div class="item-header">
+                <div class="item-title" id="itemTitle">Оборудование</div>
+                <div class="item-status" id="itemStatus">Не проверено</div>
+            </div>
+            <div class="item-info">
+                <div class="info-row">
+                    <span class="info-label">📦 Название:</span>
+                    <span class="info-value" id="itemName">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">📍 Место хранения:</span>
+                    <span class="info-value" id="itemLocation">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">🆔 Inventory ID:</span>
+                    <span class="info-value" id="itemInventoryId">—</span>
+                </div>
+            </div>
+            <div class="item-actions">
+                <button class="btn btn-success" onclick="checkItem()" id="checkBtn">
+                    ✅ Отметить
+                </button>
+                <button class="btn btn-danger" onclick="uncheckItem()" id="uncheckBtn">
+                    ❌ Снять отметку
+                </button>
+            </div>
+            <div id="statusMessage" class="status-message"></div>
+        </div>
+        
+        <div id="errorState" class="error-state" style="display: none;">
+            <div class="error-state-icon">❌</div>
+            <div class="error-state-text" id="errorText">Оборудование не найдено</div>
+        </div>
+    </div>
+    
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        
+        const API_BASE_URL = window.location.origin;
+        let currentItem = null;
+        
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+        
+        function showStatus(message, type = 'loading') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message show ${type}`;
+            
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    statusEl.classList.remove('show');
+                }, 3000);
+            }
+        }
+        
+        function displayItem(item) {
+            const card = document.getElementById('itemCard');
+            const loadingState = document.getElementById('loadingState');
+            const errorState = document.getElementById('errorState');
+            
+            document.getElementById('itemTitle').textContent = item.data?.B || 'Оборудование';
+            document.getElementById('itemName').textContent = item.data?.B || '—';
+            document.getElementById('itemLocation').textContent = item.data?.V || '—';
+            document.getElementById('itemInventoryId').textContent = item.inventory_id || '—';
+            
+            const statusEl = document.getElementById('itemStatus');
+            if (item.checkbox_t) {
+                statusEl.textContent = 'Отмечено';
+                statusEl.className = 'item-status checked';
+            } else {
+                statusEl.textContent = 'Не отмечено';
+                statusEl.className = 'item-status unchecked';
+            }
+            
+            loadingState.style.display = 'none';
+            errorState.style.display = 'none';
+            card.style.display = 'block';
+            currentItem = item;
+        }
+        
+        function showError(message) {
+            const loadingState = document.getElementById('loadingState');
+            const errorState = document.getElementById('errorState');
+            const card = document.getElementById('itemCard');
+            
+            loadingState.style.display = 'none';
+            card.style.display = 'none';
+            errorState.style.display = 'block';
+            document.getElementById('errorText').textContent = message;
+        }
+        
+        async function loadItem() {
+            const data = getUrlParam('data');
+            
+            if (!data) {
+                showError('Не указан inventory_id');
+                return;
+            }
+            
+            const inventoryId = decodeURIComponent(data);
+            const url = `${API_BASE_URL}/items/${encodeURIComponent(inventoryId)}`;
+            
+            try {
+                const response = await fetch(url);
+                
+                if (response.status === 404) {
+                    showError(`Оборудование не найдено: ${inventoryId}`);
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`Ошибка сервера: ${response.status}`);
+                }
+                
+                const item = await response.json();
+                displayItem(item);
+                
+            } catch (error) {
+                showError('Ошибка при загрузке информации: ' + error.message);
+            }
+        }
+        
+        async function checkItem() {
+            if (!currentItem) return;
+            
+            const btn = document.getElementById('checkBtn');
+            btn.disabled = true;
+            showStatus('Обновление...', 'loading');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/items/check`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        inventory_id: currentItem.inventory_id
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Ошибка обновления');
+                }
+                
+                currentItem.checkbox_t = true;
+                displayItem(currentItem);
+                showStatus('✅ Отметка установлена', 'success');
+                
+            } catch (error) {
+                showStatus('Ошибка при обновлении', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        
+        async function uncheckItem() {
+            if (!currentItem) return;
+            
+            const btn = document.getElementById('uncheckBtn');
+            btn.disabled = true;
+            showStatus('Обновление...', 'loading');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/items/uncheck`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        inventory_id: currentItem.inventory_id
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Ошибка обновления');
+                }
+                
+                currentItem.checkbox_t = false;
+                displayItem(currentItem);
+                showStatus('❌ Отметка снята', 'success');
+                
+            } catch (error) {
+                showStatus('Ошибка при обновлении', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        
+        loadItem();
+    </script>
+</body>
+</html>

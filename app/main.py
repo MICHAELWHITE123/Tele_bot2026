@@ -11,15 +11,20 @@ from app.bot import start_polling
 
 bot_task = None
 webapp_html_bytes = None
+info_html_bytes = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global bot_task, webapp_html_bytes
+    global bot_task, webapp_html_bytes, info_html_bytes
     
     html_path = Path(__file__).parent / "webapp.html"
     with open(html_path, "rb") as f:
         webapp_html_bytes = f.read()
+    
+    info_path = Path(__file__).parent / "info.html"
+    with open(info_path, "rb") as f:
+        info_html_bytes = f.read()
     
     bot_task = asyncio.create_task(start_polling())
     
@@ -152,5 +157,13 @@ async def uncheck_item(request: CheckRequest):
 async def webapp(request: Request):
     return Response(
         content=webapp_html_bytes,
+        media_type="text/html; charset=utf-8"
+    )
+
+
+@app.get("/info")
+async def info(request: Request):
+    return Response(
+        content=info_html_bytes,
         media_type="text/html; charset=utf-8"
     )
