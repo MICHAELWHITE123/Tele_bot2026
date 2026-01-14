@@ -142,8 +142,8 @@ async def webapp(request: Request):
     """WebApp interface for QR scanning and item management."""
     base_url = str(request.base_url).rstrip("/")
     
-    # Use f-string with properly escaped braces
-    html_content = f"""
+    # Use template string and replace to avoid f-string escaping issues
+    html_template = """
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -495,7 +495,7 @@ async def webapp(request: Request):
         tg.ready();
         tg.expand();
         
-        const API_BASE_URL = '{base_url}';
+        const API_BASE_URL = 'BASE_URL_PLACEHOLDER';
         let currentItem = null;
         
         console.log('WebApp initialized. API_BASE_URL:', API_BASE_URL);
@@ -735,10 +735,13 @@ async def webapp(request: Request):
 </html>
 """
     
-    # Encode content to bytes to ensure proper Content-Length calculation
+    # Replace placeholder with actual base_url
+    html_content = html_template.replace('BASE_URL_PLACEHOLDER', base_url)
+    
+    # Encode to bytes and return Response without explicit Content-Length
+    # Let Starlette calculate it automatically
     html_bytes = html_content.encode('utf-8')
     return Response(
         content=html_bytes,
-        media_type="text/html; charset=utf-8",
-        headers={"Content-Length": str(len(html_bytes))}
+        media_type="text/html; charset=utf-8"
     )
