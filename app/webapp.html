@@ -13,103 +13,62 @@
             color: var(--tg-theme-text-color, #000000);
             min-height: 100vh;
             padding: 16px;
-            padding-bottom: 80px;
-        }
-        .container { max-width: 600px; margin: 0 auto; }
-        .header { text-align: center; margin-bottom: 24px; }
-        .header h1 { font-size: 24px; font-weight: 600; color: var(--tg-theme-text-color, #000000); margin-bottom: 8px; }
-        .header p { font-size: 14px; color: var(--tg-theme-hint-color, #999999); }
-        .scan-section {
-            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .input-group { display: flex; gap: 8px; margin-bottom: 12px; }
-        .input-group input {
-            flex: 1;
-            padding: 14px 16px;
-            font-size: 16px;
-            border: 2px solid var(--tg-theme-hint-color, #e0e0e0);
-            border-radius: 12px;
-            background: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .input-group input:focus { border-color: var(--tg-theme-button-color, #3390ec); }
-        .btn {
-            padding: 14px 24px;
-            font-size: 16px;
-            font-weight: 600;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
         }
-        .btn-primary {
-            background: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #ffffff);
+        .container { 
+            max-width: 600px; 
+            width: 100%;
+            text-align: center;
         }
-        .btn-primary:active { opacity: 0.8; transform: scale(0.98); }
+        .header { margin-bottom: 32px; }
+        .header h1 { 
+            font-size: 24px; 
+            font-weight: 600; 
+            color: var(--tg-theme-text-color, #000000); 
+            margin-bottom: 8px; 
+        }
+        .header p { 
+            font-size: 14px; 
+            color: var(--tg-theme-hint-color, #999999); 
+        }
         .status-message {
-            padding: 12px 16px;
+            padding: 16px;
             border-radius: 12px;
-            margin-top: 12px;
+            margin-top: 24px;
             text-align: center;
             font-size: 14px;
             font-weight: 500;
-            display: none;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            color: var(--tg-theme-text-color, #000000);
         }
-        .status-message.show { display: block; animation: fadeIn 0.3s ease-out; }
+        .status-message.error { 
+            background: #ffebee; 
+            color: #c62828; 
+        }
+        .status-message.loading { 
+            background: #e3f2fd; 
+            color: #1565c0; 
+        }
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
-        .status-message.error { background: #ffebee; color: #c62828; }
-        .status-message.loading { background: #e3f2fd; color: #1565c0; }
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--tg-theme-hint-color, #999999);
+        .status-message.show { 
+            display: block; 
+            animation: fadeIn 0.3s ease-out; 
         }
-        .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
-        .empty-state-text { font-size: 16px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🏭 Warehouse Scanner</h1>
-            <p>Сканируйте QR-код или введите inventory_id</p>
+            <p>Наведите камеру на QR-код</p>
         </div>
-        
-        <div class="scan-section">
-            <button class="btn btn-primary" onclick="scanQR()" style="width: 100%; margin-bottom: 12px;">
-                📷 Сканировать QR-код
-            </button>
-            <div class="input-group">
-                <input 
-                    type="text" 
-                    id="inventoryId" 
-                    placeholder="Или введите inventory_id вручную"
-                    autocomplete="off"
-                >
-            </div>
-            <button class="btn btn-primary" onclick="searchItem()" style="width: 100%;">
-                🔍 Найти оборудование
-            </button>
-            <div id="statusMessage" class="status-message"></div>
-        </div>
-        
-        <div id="emptyState" class="empty-state">
-            <div class="empty-state-icon">📦</div>
-            <div class="empty-state-text">Введите или отсканируйте inventory_id</div>
+        <div id="statusMessage" class="status-message loading">
+            Открытие камеры...
         </div>
     </div>
     
@@ -122,15 +81,14 @@
             const statusEl = document.getElementById('statusMessage');
             statusEl.textContent = message;
             statusEl.className = `status-message show ${type}`;
-            
-            if (type !== 'loading') {
-                setTimeout(() => {
-                    statusEl.classList.remove('show');
-                }, 3000);
-            }
         }
         
-        function scanQR() {
+        function redirectToInfo(inventoryId) {
+            const encodedId = encodeURIComponent(inventoryId.trim());
+            window.location.href = `/info?data=${encodedId}`;
+        }
+        
+        function startScanning() {
             if (tg.platform === 'unknown') {
                 showStatus('Сканирование QR доступно только в Telegram', 'error');
                 return;
@@ -146,10 +104,12 @@
                     text: 'Наведите камеру на QR-код'
                 }, (text) => {
                     if (text && text.trim()) {
-                        const inventoryId = encodeURIComponent(text.trim());
-                        window.location.href = `/info?data=${inventoryId}`;
+                        redirectToInfo(text);
                     } else {
-                        showStatus('QR-код не распознан. Попробуйте еще раз.', 'error');
+                        showStatus('QR-код не распознан. Повторное сканирование...', 'error');
+                        setTimeout(() => {
+                            startScanning();
+                        }, 1000);
                     }
                 });
             } catch (error) {
@@ -157,32 +117,9 @@
             }
         }
         
-        function searchItem() {
-            const inventoryId = document.getElementById('inventoryId').value.trim();
-            
-            if (!inventoryId) {
-                showStatus('Введите inventory_id', 'error');
-                return;
-            }
-            
-            const encodedId = encodeURIComponent(inventoryId);
-            window.location.href = `/info?data=${encodedId}`;
-        }
-        
-        document.getElementById('inventoryId').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                searchItem();
-            }
-        });
-        
-        if (tg.platform !== 'unknown') {
-            setTimeout(() => {
-                const firstTime = !localStorage.getItem('webapp_opened');
-                if (firstTime) {
-                    localStorage.setItem('webapp_opened', 'true');
-                }
-            }, 500);
-        }
+        setTimeout(() => {
+            startScanning();
+        }, 500);
     </script>
 </body>
 </html>
