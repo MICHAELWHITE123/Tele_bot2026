@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, Response
 from pydantic import BaseModel
 
 from app.google_sheets import get_sheets_client
@@ -738,6 +738,9 @@ async def webapp(request: Request):
     # Replace placeholder with actual base_url
     html_content = html_template.replace('BASE_URL_PLACEHOLDER', base_url)
     
-    # Use HTMLResponse for static HTML content
-    # This automatically handles Content-Length correctly
-    return HTMLResponse(content=html_content)
+    # Use Response with bytes content - FastAPI will handle Content-Length correctly
+    # Encoding to bytes ensures proper size calculation
+    return Response(
+        content=html_content.encode('utf-8'),
+        media_type="text/html; charset=utf-8"
+    )
