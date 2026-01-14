@@ -757,7 +757,11 @@ async def webapp(request: Request):
         media_type="text/html; charset=utf-8"
     )
     # Ensure no Content-Length header is set
-    if "content-length" in response.headers:
-        del response.headers["content-length"]
+    # Use try/except for compatibility with MutableHeaders
+    try:
+        if "content-length" in response.headers:
+            del response.headers["content-length"]
+    except (KeyError, AttributeError):
+        pass
     
     return response
