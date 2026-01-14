@@ -33,6 +33,25 @@
             font-size: 14px; 
             color: var(--tg-theme-hint-color, #999999); 
         }
+        .btn {
+            padding: 16px 32px;
+            font-size: 18px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            width: 100%;
+            max-width: 300px;
+        }
+        .btn:active { opacity: 0.8; transform: scale(0.98); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .status-message {
             padding: 16px;
             border-radius: 12px;
@@ -40,8 +59,7 @@
             text-align: center;
             font-size: 14px;
             font-weight: 500;
-            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            color: var(--tg-theme-text-color, #000000);
+            display: none;
         }
         .status-message.error { 
             background: #ffebee; 
@@ -65,11 +83,12 @@
     <div class="container">
         <div class="header">
             <h1>🏭 Warehouse Scanner</h1>
-            <p>Наведите камеру на QR-код</p>
+            <p>Нажмите кнопку для сканирования QR-кода</p>
         </div>
-        <div id="statusMessage" class="status-message loading">
-            Открытие камеры...
-        </div>
+        <button class="btn" id="scanBtn" onclick="scanQR()">
+            📷 Сканировать QR
+        </button>
+        <div id="statusMessage" class="status-message"></div>
     </div>
     
     <script>
@@ -88,14 +107,19 @@
             window.location.href = `/info?data=${encodedId}`;
         }
         
-        function startScanning() {
+        function scanQR() {
+            const btn = document.getElementById('scanBtn');
+            btn.disabled = true;
+            
             if (tg.platform === 'unknown') {
                 showStatus('Сканирование QR доступно только в Telegram', 'error');
+                btn.disabled = false;
                 return;
             }
             
             if (!tg.showScanQrPopup) {
                 showStatus('Сканирование QR недоступно в этой версии Telegram', 'error');
+                btn.disabled = false;
                 return;
             }
             
@@ -103,23 +127,18 @@
                 tg.showScanQrPopup({
                     text: 'Наведите камеру на QR-код'
                 }, (text) => {
+                    btn.disabled = false;
                     if (text && text.trim()) {
                         redirectToInfo(text);
                     } else {
-                        showStatus('QR-код не распознан. Повторное сканирование...', 'error');
-                        setTimeout(() => {
-                            startScanning();
-                        }, 1000);
+                        showStatus('QR-код не распознан. Попробуйте еще раз.', 'error');
                     }
                 });
             } catch (error) {
+                btn.disabled = false;
                 showStatus('Ошибка при сканировании QR: ' + error.message, 'error');
             }
         }
-        
-        setTimeout(() => {
-            startScanning();
-        }, 500);
     </script>
 </body>
 </html>
