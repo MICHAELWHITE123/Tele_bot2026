@@ -142,6 +142,7 @@ async def webapp(request: Request):
     """WebApp interface for QR scanning and item management."""
     base_url = str(request.base_url).rstrip("/")
     
+    # HTML template with escaped braces for JavaScript template literals
     html_content = """
 <!DOCTYPE html>
 <html lang="ru">
@@ -494,91 +495,91 @@ async def webapp(request: Request):
         tg.ready();
         tg.expand();
         
-        const API_BASE_URL = 'BASE_URL_PLACEHOLDER';
+        const API_BASE_URL = '{base_url}';
         let currentItem = null;
         
         console.log('WebApp initialized. API_BASE_URL:', API_BASE_URL);
         console.log('Telegram WebApp platform:', tg.platform);
         
-        function showStatus(message, type = 'loading') {{
+        function showStatus(message, type = 'loading') {{{{
             const statusEl = document.getElementById('statusMessage');
             statusEl.textContent = message;
-            statusEl.className = `status-message show ${{type}}`;
+            statusEl.className = `status-message show ${{{{type}}}}`;
             
-            if (type !== 'loading') {{
-                setTimeout(() => {{
+            if (type !== 'loading') {{{{
+                setTimeout(() => {{{{
                     statusEl.classList.remove('show');
-                }}, 3000);
-            }}
-        }}
+                }}}}, 3000);
+            }}}}
+        }}}}
         
-        function hideStatus() {{
+        function hideStatus() {{{{
             const statusEl = document.getElementById('statusMessage');
             statusEl.classList.remove('show');
-        }}
+        }}}}
         
-        function scanQR() {{
+        function scanQR() {{{{
             console.log('scanQR called, platform:', tg.platform);
             
-            if (tg.platform === 'unknown') {{
+            if (tg.platform === 'unknown') {{{{
                 showStatus('Сканирование QR доступно только в Telegram', 'error');
                 return;
-            }}
+            }}}}
             
-            if (!tg.showScanQrPopup) {{
+            if (!tg.showScanQrPopup) {{{{
                 console.error('showScanQrPopup not available');
                 showStatus('Сканирование QR недоступно в этой версии Telegram', 'error');
                 return;
-            }}
+            }}}}
             
-            try {{
-                tg.showScanQrPopup({{
+            try {{{{
+                tg.showScanQrPopup({{{{
                     text: 'Наведите камеру на QR-код'
-                }}, (text) => {{
+                }}}}, (text) => {{{{
                     console.log('QR scan result:', text);
-                    if (text && text.trim()) {{
+                    if (text && text.trim()) {{{{
                         const inventoryId = text.trim();
                         document.getElementById('inventoryId').value = inventoryId;
                         searchItem();
-                    }} else {{
+                    }}}} else {{{{
                         showStatus('QR-код не распознан. Попробуйте еще раз.', 'error');
-                    }}
-                }});
-            }} catch (error) {{
+                    }}}}
+                }}}});
+            }}}} catch (error) {{{{
                 console.error('QR scan error:', error);
                 showStatus('Ошибка при сканировании QR: ' + error.message, 'error');
-            }}
-        }}
+            }}}}
+        }}}}
         
-        async function searchItem() {{
+        async function searchItem() {{{{
             const inventoryId = document.getElementById('inventoryId').value.trim();
             
-            if (!inventoryId) {{
+            if (!inventoryId) {{{{
                 showStatus('Введите inventory_id', 'error');
                 return;
-            }}
+            }}}}
             
             showStatus('Поиск оборудования...', 'loading');
             
-            const url = `${{API_BASE_URL}}/items/${{inventoryId}}`;
+            const url = `${{{{API_BASE_URL}}}}/items/${{{{inventoryId}}}}`;
             console.log('Searching item, URL:', url);
             
-            try {{
+            try {{{{
                 const response = await fetch(url);
                 console.log('Response status:', response.status);
                 
-                if (response.status === 404) {{
+                if (response.status === 404) {{{{
                     const error = await response.json();
-                    showStatus(`Оборудование не найдено: ${{inventoryId}}`, 'error');
+                    showStatus(`Оборудование не найдено: ${{{{inventoryId}}}}`, 'error');
                     hideItemCard();
                     return;
-                }}
+                }}}}
                 
-                if (!response.ok) {{
+                if (!response.ok) {{{{
                     const errorText = await response.text();
                     console.error('Server error:', errorText);
-                    throw new Error(`Ошибка сервера: ${{response.status}}`);
-                }}
+                    throw new Error(`Ошибка сервера: ${{{{response.status}}}}`);
+                }}}}
                 
                 const item = await response.json();
                 console.log('Item found:', item);
@@ -586,13 +587,13 @@ async def webapp(request: Request):
                 displayItem(item);
                 hideStatus();
                 
-            }} catch (error) {{
+            }}}} catch (error) {{{{
                 console.error('Search error:', error);
                 showStatus('Ошибка при поиске оборудования: ' + error.message, 'error');
-            }}
-        }}
+            }}}}
+        }}}}
         
-        function displayItem(item) {{
+        function displayItem(item) {{{{
             const card = document.getElementById('itemCard');
             const emptyState = document.getElementById('emptyState');
             
@@ -602,139 +603,137 @@ async def webapp(request: Request):
             document.getElementById('itemInventoryId').textContent = item.inventory_id || '—';
             
             const statusEl = document.getElementById('itemStatus');
-            if (item.checkbox_t) {{
+            if (item.checkbox_t) {{{{
                 statusEl.textContent = 'Отмечено';
                 statusEl.className = 'item-status checked';
-            }} else {{
+            }}}} else {{{{
                 statusEl.textContent = 'Не отмечено';
                 statusEl.className = 'item-status unchecked';
-            }}
+            }}}}
             
             card.classList.add('show');
             emptyState.style.display = 'none';
-        }}
+        }}}}
         
-        function hideItemCard() {{
+        function hideItemCard() {{{{
             const card = document.getElementById('itemCard');
             const emptyState = document.getElementById('emptyState');
             card.classList.remove('show');
             emptyState.style.display = 'block';
             currentItem = null;
-        }}
+        }}}}
         
-        async function checkItem() {{
+        async function checkItem() {{{{
             if (!currentItem) return;
             
             const btn = document.getElementById('checkBtn');
             btn.disabled = true;
             showStatus('Обновление...', 'loading');
             
-            try {{
-                const response = await fetch(`${{API_BASE_URL}}/items/check`, {{
+            try {{{{
+                const response = await fetch(`${{{{API_BASE_URL}}}}/items/check`, {{{{
                     method: 'POST',
-                    headers: {{
+                    headers: {{{{
                         'Content-Type': 'application/json'
-                    }},
-                    body: JSON.stringify({{
+                    }}}},
+                    body: JSON.stringify({{{{
                         inventory_id: currentItem.inventory_id
-                    }})
-                }});
+                    }}}})
+                }}}});
                 
-                if (!response.ok) {{
+                if (!response.ok) {{{{
                     const error = await response.json();
                     throw new Error(error.error || 'Ошибка обновления');
-                }}
+                }}}}
                 
                 const result = await response.json();
                 currentItem.checkbox_t = true;
                 displayItem(currentItem);
                 showStatus('✅ Отметка установлена', 'success');
                 
-            }} catch (error) {{
+            }}}} catch (error) {{{{
                 showStatus('Ошибка при обновлении', 'error');
                 console.error('Check error:', error);
-            }} finally {{
+            }}}} finally {{{{
                 btn.disabled = false;
-            }}
-        }}
+            }}}}
+        }}}}
         
-        async function uncheckItem() {{
+        async function uncheckItem() {{{{
             if (!currentItem) return;
             
             const btn = document.getElementById('uncheckBtn');
             btn.disabled = true;
             showStatus('Обновление...', 'loading');
             
-            try {{
-                const response = await fetch(`${{API_BASE_URL}}/items/uncheck`, {{
+            try {{{{
+                const response = await fetch(`${{{{API_BASE_URL}}}}/items/uncheck`, {{{{
                     method: 'POST',
-                    headers: {{
+                    headers: {{{{
                         'Content-Type': 'application/json'
-                    }},
-                    body: JSON.stringify({{
+                    }}}},
+                    body: JSON.stringify({{{{
                         inventory_id: currentItem.inventory_id
-                    }})
-                }});
+                    }}}})
+                }}}});
                 
-                if (!response.ok) {{
+                if (!response.ok) {{{{
                     const error = await response.json();
                     throw new Error(error.error || 'Ошибка обновления');
-                }}
+                }}}}
                 
                 const result = await response.json();
                 currentItem.checkbox_t = false;
                 displayItem(currentItem);
                 showStatus('❌ Отметка снята', 'success');
                 
-            }} catch (error) {{
+            }}}} catch (error) {{{{
                 showStatus('Ошибка при обновлении', 'error');
                 console.error('Uncheck error:', error);
-            }} finally {{
+            }}}} finally {{{{
                 btn.disabled = false;
-            }}
-        }}
+            }}}}
+        }}}}
         
-        document.getElementById('inventoryId').addEventListener('keypress', (e) => {{
-            if (e.key === 'Enter') {{
+        document.getElementById('inventoryId').addEventListener('keypress', (e) => {{{{
+            if (e.key === 'Enter') {{{{
                 searchItem();
-            }}
-        }});
+            }}}}
+        }}}});
         
         // Проверка доступности API при загрузке
-        async function checkAPI() {{
-            try {{
-                const response = await fetch(`${{API_BASE_URL}}/health`);
-                if (response.ok) {{
+        async function checkAPI() {{{{
+            try {{{{
+                const response = await fetch(`${{{{API_BASE_URL}}}}/health`);
+                if (response.ok) {{{{
                     console.log('API is available');
-                }} else {{
+                }}}} else {{{{
                     console.warn('API health check failed:', response.status);
-                }}
-            }} catch (error) {{
+                }}}}
+            }}}} catch (error) {{{{
                 console.error('API health check error:', error);
                 showStatus('Предупреждение: не удалось подключиться к серверу', 'error');
-            }}
-        }}
+            }}}}
+        }}}}
         
         // Автоматически предлагаем сканировать QR при открытии WebApp
-        if (tg.platform !== 'unknown') {{
+        if (tg.platform !== 'unknown') {{{{
             // Небольшая задержка для лучшего UX
-            setTimeout(() => {{
+            setTimeout(() => {{{{
                 const firstTime = !localStorage.getItem('webapp_opened');
-                if (firstTime) {{
+                if (firstTime) {{{{
                     localStorage.setItem('webapp_opened', 'true');
                     showStatus('Нажмите "Сканировать QR-код" для начала работы', 'loading');
-                }}
+                }}}}
                 checkAPI();
-            }}, 500);
-        }} else {{
+            }}}}, 500);
+        }}}} else {{{{
             checkAPI();
-        }}
+        }}}}
     </script>
 </body>
 </html>
-"""
-    # Replace placeholder with actual base_url
-    html_content = html_content.replace('BASE_URL_PLACEHOLDER', base_url)
+""".format(base_url=base_url)
     
     # Return HTML response - Starlette will handle Content-Length automatically
     return HTMLResponse(content=html_content)
