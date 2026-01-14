@@ -177,13 +177,13 @@ async def cmd_start(message: types.Message):
     webapp_url = config.get_webapp_url()
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📷 Open QR Scanner", web_app=WebAppInfo(url=webapp_url))]
+        [InlineKeyboardButton(text="📷 Открыть сканер QR", web_app=WebAppInfo(url=webapp_url))]
     ])
     
     await message.answer(
         "🏭 <b>Warehouse Bot</b>\n\n"
-        "Send inventory_id from QR code as text message,\n"
-        "or use the scanner below:",
+        "Откройте WebApp для сканирования QR-кода и управления оборудованием.\n"
+        "Или отправьте inventory_id текстовым сообщением.",
         parse_mode="HTML",
         reply_markup=keyboard
     )

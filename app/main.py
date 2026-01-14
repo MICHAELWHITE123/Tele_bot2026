@@ -437,16 +437,16 @@ async def webapp(request: Request):
         </div>
         
         <div class="scan-section">
+            <button class="btn btn-primary" onclick="scanQR()" style="width: 100%; margin-bottom: 12px;">
+                📷 Сканировать QR-код
+            </button>
             <div class="input-group">
                 <input 
                     type="text" 
                     id="inventoryId" 
-                    placeholder="Введите inventory_id"
+                    placeholder="Или введите inventory_id вручную"
                     autocomplete="off"
                 >
-                <button class="btn btn-primary" onclick="scanQR()">
-                    📷
-                </button>
             </div>
             <button class="btn btn-primary" onclick="searchItem()" style="width: 100%;">
                 🔍 Найти оборудование
@@ -523,9 +523,12 @@ async def webapp(request: Request):
             tg.showScanQrPopup({{
                 text: 'Наведите камеру на QR-код'
             }}, (text) => {{
-                if (text) {{
-                    document.getElementById('inventoryId').value = text.trim();
+                if (text && text.trim()) {{
+                    const inventoryId = text.trim();
+                    document.getElementById('inventoryId').value = inventoryId;
                     searchItem();
+                }} else {{
+                    showStatus('QR-код не распознан. Попробуйте еще раз.', 'error');
                 }}
             }});
         }}
@@ -672,6 +675,18 @@ async def webapp(request: Request):
                 searchItem();
             }}
         }});
+        
+        // Автоматически предлагаем сканировать QR при открытии WebApp
+        if (tg.platform !== 'unknown') {{
+            // Небольшая задержка для лучшего UX
+            setTimeout(() => {{
+                const firstTime = !localStorage.getItem('webapp_opened');
+                if (firstTime) {{
+                    localStorage.setItem('webapp_opened', 'true');
+                    showStatus('Нажмите "Сканировать QR-код" для начала работы', 'loading');
+                }}
+            }}, 500);
+        }}
     </script>
 </body>
 </html>
