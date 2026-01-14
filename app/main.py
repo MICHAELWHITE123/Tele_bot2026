@@ -137,7 +137,7 @@ async def uncheck_item(request: CheckRequest):
         )
 
 
-@app.get("/webapp", response_class=HTMLResponse)
+@app.get("/webapp")
 async def webapp(request: Request):
     """WebApp interface for QR scanning and item management."""
     base_url = str(request.base_url).rstrip("/")
@@ -733,4 +733,5 @@ async def webapp(request: Request):
 </body>
 </html>
 """
+    # Return HTML response - Starlette will handle Content-Length automatically
     return HTMLResponse(content=html_content)
