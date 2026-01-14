@@ -154,7 +154,7 @@ async def uncheck_item(request: CheckRequest):
 
 
 @app.get("/webapp")
-async def webapp(request: Request):
+async def webapp():
     return Response(
         content=webapp_html_bytes,
         media_type="text/html; charset=utf-8"
@@ -162,7 +162,7 @@ async def webapp(request: Request):
 
 
 @app.get("/info")
-async def info(request: Request):
+async def info():
     return Response(
         content=info_html_bytes,
         media_type="text/html; charset=utf-8"
