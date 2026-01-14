@@ -189,7 +189,7 @@ async def cmd_start(message: types.Message):
     )
 
 
-@router.message()
+@router.message(F.text & ~F.text.startswith('/'))
 async def handle_message(message: types.Message):
     """Handle text messages as QR code data (inventory_id)."""
     if not message.text:

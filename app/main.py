@@ -497,6 +497,9 @@ async def webapp(request: Request):
         const API_BASE_URL = '{base_url}';
         let currentItem = null;
         
+        console.log('WebApp initialized. API_BASE_URL:', API_BASE_URL);
+        console.log('Telegram WebApp platform:', tg.platform);
+        
         function showStatus(message, type = 'loading') {{
             const statusEl = document.getElementById('statusMessage');
             statusEl.textContent = message;
@@ -515,22 +518,36 @@ async def webapp(request: Request):
         }}
         
         function scanQR() {{
+            console.log('scanQR called, platform:', tg.platform);
+            
             if (tg.platform === 'unknown') {{
                 showStatus('Сканирование QR доступно только в Telegram', 'error');
                 return;
             }}
             
-            tg.showScanQrPopup({{
-                text: 'Наведите камеру на QR-код'
-            }}, (text) => {{
-                if (text && text.trim()) {{
-                    const inventoryId = text.trim();
-                    document.getElementById('inventoryId').value = inventoryId;
-                    searchItem();
-                }} else {{
-                    showStatus('QR-код не распознан. Попробуйте еще раз.', 'error');
-                }}
-            }});
+            if (!tg.showScanQrPopup) {{
+                console.error('showScanQrPopup not available');
+                showStatus('Сканирование QR недоступно в этой версии Telegram', 'error');
+                return;
+            }}
+            
+            try {{
+                tg.showScanQrPopup({{
+                    text: 'Наведите камеру на QR-код'
+                }}, (text) => {{
+                    console.log('QR scan result:', text);
+                    if (text && text.trim()) {{
+                        const inventoryId = text.trim();
+                        document.getElementById('inventoryId').value = inventoryId;
+                        searchItem();
+                    }} else {{
+                        showStatus('QR-код не распознан. Попробуйте еще раз.', 'error');
+                    }}
+                }});
+            }} catch (error) {{
+                console.error('QR scan error:', error);
+                showStatus('Ошибка при сканировании QR: ' + error.message, 'error');
+            }}
         }}
         
         async function searchItem() {{
@@ -543,8 +560,12 @@ async def webapp(request: Request):
             
             showStatus('Поиск оборудования...', 'loading');
             
+            const url = `${{API_BASE_URL}}/items/${{inventoryId}}`;
+            console.log('Searching item, URL:', url);
+            
             try {{
-                const response = await fetch(`${{API_BASE_URL}}/items/${{inventoryId}}`);
+                const response = await fetch(url);
+                console.log('Response status:', response.status);
                 
                 if (response.status === 404) {{
                     const error = await response.json();
@@ -554,17 +575,20 @@ async def webapp(request: Request):
                 }}
                 
                 if (!response.ok) {{
-                    throw new Error('Ошибка сервера');
+                    const errorText = await response.text();
+                    console.error('Server error:', errorText);
+                    throw new Error(`Ошибка сервера: ${{response.status}}`);
                 }}
                 
                 const item = await response.json();
+                console.log('Item found:', item);
                 currentItem = item;
                 displayItem(item);
                 hideStatus();
                 
             }} catch (error) {{
-                showStatus('Ошибка при поиске оборудования', 'error');
                 console.error('Search error:', error);
+                showStatus('Ошибка при поиске оборудования: ' + error.message, 'error');
             }}
         }}
         
@@ -676,6 +700,21 @@ async def webapp(request: Request):
             }}
         }});
         
+        // Проверка доступности API при загрузке
+        async function checkAPI() {{
+            try {{
+                const response = await fetch(`${{API_BASE_URL}}/health`);
+                if (response.ok) {{
+                    console.log('API is available');
+                }} else {{
+                    console.warn('API health check failed:', response.status);
+                }}
+            }} catch (error) {{
+                console.error('API health check error:', error);
+                showStatus('Предупреждение: не удалось подключиться к серверу', 'error');
+            }}
+        }}
+        
         // Автоматически предлагаем сканировать QR при открытии WebApp
         if (tg.platform !== 'unknown') {{
             // Небольшая задержка для лучшего UX
@@ -685,7 +724,10 @@ async def webapp(request: Request):
                     localStorage.setItem('webapp_opened', 'true');
                     showStatus('Нажмите "Сканировать QR-код" для начала работы', 'loading');
                 }}
+                checkAPI();
             }}, 500);
+        }} else {{
+            checkAPI();
         }}
     </script>
 </body>
