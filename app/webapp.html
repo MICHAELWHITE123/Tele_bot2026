@@ -104,7 +104,8 @@
         
         function redirectToInfo(inventoryId) {
             const encodedId = encodeURIComponent(inventoryId.trim());
-            window.location.href = `/info?data=${encodedId}`;
+            const baseUrl = window.location.origin;
+            window.location.href = `${baseUrl}/info?data=${encodedId}`;
         }
         
         function scanQR() {
