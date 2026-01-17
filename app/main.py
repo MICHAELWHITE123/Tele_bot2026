@@ -55,6 +55,11 @@ class CheckResponse(BaseModel):
     inventory_id: str
 
 
+class UpdateInventoryNumberRequest(BaseModel):
+    inventory_id: str
+    inventory_number: str
+
+
 @app.get("/")
 async def root():
     return RedirectResponse(url="/webapp")
@@ -156,6 +161,31 @@ async def uncheck_item(request: CheckRequest):
 @app.get("/webapp", response_class=HTMLResponse)
 async def webapp():
     return HTMLResponse(content=webapp_html_bytes.decode('utf-8'))
+
+
+@app.post("/items/update-inventory-number", response_model=CheckResponse)
+async def update_inventory_number(request: UpdateInventoryNumberRequest):
+    try:
+        client = get_sheets_client()
+        item = client.find_item_by_inventory_id(request.inventory_id)
+        
+        if item is None:
+            return JSONResponse(
+                status_code=404,
+                content={"error": "inventory_id not found"}
+            )
+        
+        client.update_column_z(item["row_index"], request.inventory_number)
+        
+        return CheckResponse(
+            status="ok",
+            inventory_id=request.inventory_id
+        )
+    except Exception:
+        return JSONResponse(
+            status_code=500,
+            content={"error": "internal server error"}
+        )
 
 
 @app.get("/info", response_class=HTMLResponse)

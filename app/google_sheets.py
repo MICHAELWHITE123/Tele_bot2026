@@ -79,6 +79,7 @@ class GoogleSheetsClient:
                         "V": row[21] if len(row) > 21 else "",
                         "W": row[22] if len(row) > 22 else "",
                         "X": row[23] if len(row) > 23 else "",
+                        "Z": row[25] if len(row) > 25 else "",
                     }
                 }
                 items.append(item)
@@ -95,6 +96,20 @@ class GoogleSheetsClient:
     def update_checkbox(self, row_index: int, value: bool) -> bool:
         """Update column T (checkbox) for given row. Returns success status."""
         range_notation = f"{SHEET_NAME}!T{row_index}"
+        body = {"values": [[value]]}
+        
+        self._sheets.values().update(
+            spreadsheetId=self._spreadsheet_id,
+            range=range_notation,
+            valueInputOption="USER_ENTERED",
+            body=body
+        ).execute()
+        
+        return True
+
+    def update_column_z(self, row_index: int, value: str) -> bool:
+        """Update column Z for given row. Returns success status."""
+        range_notation = f"{SHEET_NAME}!Z{row_index}"
         body = {"values": [[value]]}
         
         self._sheets.values().update(
