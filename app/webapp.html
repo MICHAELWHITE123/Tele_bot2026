@@ -130,6 +130,9 @@
                 }, (text) => {
                     btn.disabled = false;
                     if (text && text.trim()) {
+                        if (tg.closeScanQrPopup) {
+                            tg.closeScanQrPopup();
+                        }
                         redirectToInfo(text);
                     } else {
                         showStatus('Сканирование отменено', 'error');
