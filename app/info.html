@@ -183,7 +183,7 @@
             <div class="error-state-text" id="errorText">Оборудование не найдено</div>
         </div>
         
-        <a href="/webapp" class="btn btn-back" style="display: block; margin-top: 32px; text-decoration: none; width: 100%;">← Назад к сканеру</a>
+        <button class="btn btn-back" onclick="scanQR()" style="display: block; margin-top: 32px; width: 100%;">← Назад к сканеру</button>
     </div>
     
     <script>
@@ -252,6 +252,41 @@
             card.style.display = 'none';
             errorState.style.display = 'block';
             document.getElementById('errorText').textContent = message;
+        }
+        
+        function redirectToInfo(inventoryId) {
+            const encodedId = encodeURIComponent(inventoryId.trim());
+            const baseUrl = window.location.origin;
+            window.location.href = `${baseUrl}/info?data=${encodedId}`;
+        }
+        
+        function scanQR() {
+            if (tg.platform === 'unknown') {
+                showStatus('Сканирование QR доступно только в Telegram', 'error');
+                return;
+            }
+            
+            if (!tg.showScanQrPopup) {
+                showStatus('Сканирование QR недоступно в этой версии Telegram', 'error');
+                return;
+            }
+            
+            try {
+                tg.showScanQrPopup({
+                    text: 'Наведите камеру на QR-код'
+                }, (text) => {
+                    if (text && text.trim()) {
+                        if (tg.closeScanQrPopup) {
+                            tg.closeScanQrPopup();
+                        }
+                        redirectToInfo(text);
+                    } else {
+                        showStatus('Сканирование отменено', 'error');
+                    }
+                });
+            } catch (error) {
+                showStatus('Ошибка при сканировании QR: ' + error.message, 'error');
+            }
         }
         
         async function loadItem() {
