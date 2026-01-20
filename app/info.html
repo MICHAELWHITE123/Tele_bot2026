@@ -164,13 +164,10 @@
                     />
                 </div>
                 <button class="btn btn-success" onclick="saveInventoryNumber()" id="saveInventoryBtn" style="width: 100%;">
-                    💾 Сохранить номер
+                    💾 Сохранить
                 </button>
             </div>
             <div class="item-actions">
-                <button class="btn btn-success" onclick="checkItem()" id="checkBtn">
-                    ✅ Отметить
-                </button>
                 <button class="btn btn-danger" onclick="uncheckItem()" id="uncheckBtn">
                     ❌ Снять отметку
                 </button>
@@ -419,7 +416,29 @@
                     currentItem.data = {};
                 }
                 currentItem.data.Z = inventoryNumber;
-                showStatus('✅ Номер сохранен', 'success');
+                
+                // Отмечаем элемент после сохранения номера
+                try {
+                    const checkResponse = await fetch(`${API_BASE_URL}/items/check`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            inventory_id: currentItem.inventory_id
+                        })
+                    });
+                    
+                    if (checkResponse.ok) {
+                        currentItem.checkbox_t = true;
+                        displayItem(currentItem);
+                        showStatus('✅ Номер сохранен и отметка установлена', 'success');
+                    } else {
+                        showStatus('✅ Номер сохранен', 'success');
+                    }
+                } catch (checkError) {
+                    showStatus('✅ Номер сохранен', 'success');
+                }
                 
             } catch (error) {
                 showStatus('Ошибка при сохранении: ' + error.message, 'error');
