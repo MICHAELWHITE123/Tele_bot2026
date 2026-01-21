@@ -77,6 +77,7 @@
         .btn-success { background: #4caf50; color: #ffffff; }
         .btn-danger { background: #f44336; color: #ffffff; }
         .btn-back { background: rgb(150, 29, 245); color: #ffffff; }
+        .btn-info { background: #2196f3; color: #ffffff; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn:active { opacity: 0.8; }
         .status-message {
@@ -111,6 +112,61 @@
         }
         .error-state-icon { font-size: 48px; margin-bottom: 16px; }
         .error-state-text { font-size: 16px; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--tg-theme-hint-color, #e0e0e0);
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--tg-theme-text-color, #000000);
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-body {
+            color: var(--tg-theme-text-color, #000000);
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
     </style>
 </head>
 <body>
@@ -168,11 +224,24 @@
                 </button>
             </div>
             <div class="item-actions">
+                <button class="btn btn-info" onclick="showSpecification()" id="specBtn">
+                    📋 Спецификация
+                </button>
                 <button class="btn btn-danger" onclick="uncheckItem()" id="uncheckBtn">
                     ❌ Снять отметку
                 </button>
             </div>
             <div id="statusMessage" class="status-message"></div>
+        </div>
+        
+        <div id="specModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">📋 Спецификация</div>
+                    <button class="modal-close" onclick="closeSpecification()">×</button>
+                </div>
+                <div class="modal-body" id="specContent">—</div>
+            </div>
         </div>
         
         <div id="errorState" class="error-state" style="display: none;">
@@ -445,6 +514,22 @@
             } finally {
                 btn.disabled = false;
             }
+        }
+        
+        function showSpecification() {
+            if (!currentItem) return;
+            
+            const specContent = document.getElementById('specContent');
+            const specification = currentItem.data?.U || '—';
+            specContent.textContent = specification || '—';
+            
+            const modal = document.getElementById('specModal');
+            modal.classList.add('show');
+        }
+        
+        function closeSpecification() {
+            const modal = document.getElementById('specModal');
+            modal.classList.remove('show');
         }
         
         loadItem();
