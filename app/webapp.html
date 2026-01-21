@@ -49,9 +49,13 @@
             color: var(--tg-theme-button-text-color, #ffffff);
             width: 100%;
             max-width: 300px;
+            margin-bottom: 12px;
         }
         .btn:active { opacity: 0.8; transform: scale(0.98); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-history {
+            background: rgb(150, 29, 245);
+        }
         .status-message {
             padding: 16px;
             border-radius: 12px;
@@ -88,6 +92,9 @@
         <button class="btn" id="scanBtn" onclick="scanQR()">
             📷 Сканировать QR
         </button>
+        <button class="btn btn-history" onclick="goToHistory()">
+            📜 История сканирования
+        </button>
         <div id="statusMessage" class="status-message"></div>
     </div>
     
@@ -95,6 +102,37 @@
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
+        
+        const STORAGE_KEY = 'scan_history';
+        const MAX_HISTORY_ITEMS = 100;
+        
+        function saveToHistory(inventoryId, itemName) {
+            try {
+                const historyJson = localStorage.getItem(STORAGE_KEY);
+                const history = historyJson ? JSON.parse(historyJson) : [];
+                
+                const newItem = {
+                    inventory_id: inventoryId,
+                    name: itemName || 'Оборудование',
+                    timestamp: Date.now()
+                };
+                
+                const existingIndex = history.findIndex(item => item.inventory_id === inventoryId);
+                if (existingIndex !== -1) {
+                    history.splice(existingIndex, 1);
+                }
+                
+                history.unshift(newItem);
+                
+                if (history.length > MAX_HISTORY_ITEMS) {
+                    history.pop();
+                }
+                
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+            } catch (error) {
+                console.error('Failed to save history:', error);
+            }
+        }
         
         function showStatus(message, type = 'loading') {
             const statusEl = document.getElementById('statusMessage');
@@ -105,6 +143,7 @@
         function redirectToInfo(inventoryId) {
             const encodedId = encodeURIComponent(inventoryId.trim());
             const baseUrl = window.location.origin;
+            saveToHistory(inventoryId);
             window.location.href = `${baseUrl}/info?data=${encodedId}`;
         }
         
@@ -142,6 +181,11 @@
                 btn.disabled = false;
                 showStatus('Ошибка при сканировании QR: ' + error.message, 'error');
             }
+        }
+        
+        function goToHistory() {
+            const baseUrl = window.location.origin;
+            window.location.href = `${baseUrl}/history`;
         }
     </script>
 </body>

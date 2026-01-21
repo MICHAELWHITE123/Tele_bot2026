@@ -249,7 +249,10 @@
             <div class="error-state-text" id="errorText">Оборудование не найдено</div>
         </div>
         
-        <button class="btn btn-back" onclick="scanQR()" style="display: block; margin-top: 32px; width: 100%;">← Назад к сканеру</button>
+        <div style="display: flex; gap: 12px; margin-top: 32px;">
+            <button class="btn btn-back" onclick="scanQR()" style="flex: 1;">← Назад к сканеру</button>
+            <button class="btn btn-back" onclick="goToHistory()" style="flex: 1;">📜 История</button>
+        </div>
     </div>
     
     <script>
@@ -258,7 +261,37 @@
         tg.expand();
         
         const API_BASE_URL = window.location.origin;
+        const STORAGE_KEY = 'scan_history';
+        const MAX_HISTORY_ITEMS = 100;
         let currentItem = null;
+        
+        function saveToHistory(inventoryId, itemName) {
+            try {
+                const historyJson = localStorage.getItem(STORAGE_KEY);
+                const history = historyJson ? JSON.parse(historyJson) : [];
+                
+                const newItem = {
+                    inventory_id: inventoryId,
+                    name: itemName || 'Оборудование',
+                    timestamp: Date.now()
+                };
+                
+                const existingIndex = history.findIndex(item => item.inventory_id === inventoryId);
+                if (existingIndex !== -1) {
+                    history.splice(existingIndex, 1);
+                }
+                
+                history.unshift(newItem);
+                
+                if (history.length > MAX_HISTORY_ITEMS) {
+                    history.pop();
+                }
+                
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+            } catch (error) {
+                console.error('Failed to save history:', error);
+            }
+        }
         
         function getUrlParam(name) {
             const urlParams = new URLSearchParams(window.location.search);
@@ -323,6 +356,7 @@
         function redirectToInfo(inventoryId) {
             const encodedId = encodeURIComponent(inventoryId.trim());
             const baseUrl = window.location.origin;
+            saveToHistory(inventoryId);
             window.location.href = `${baseUrl}/info?data=${encodedId}`;
         }
         
@@ -380,6 +414,7 @@
                 
                 const item = await response.json();
                 displayItem(item);
+                saveToHistory(item.inventory_id, item.data?.B);
                 
             } catch (error) {
                 showError('Ошибка при загрузке информации: ' + error.message);
@@ -530,6 +565,11 @@
         function closeSpecification() {
             const modal = document.getElementById('specModal');
             modal.classList.remove('show');
+        }
+        
+        function goToHistory() {
+            const baseUrl = window.location.origin;
+            window.location.href = `${baseUrl}/history`;
         }
         
         loadItem();
