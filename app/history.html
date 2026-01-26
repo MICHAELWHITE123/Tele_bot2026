@@ -85,7 +85,12 @@
             justify-content: center;
             gap: 8px;
             width: 100%;
-            margin-top: 16px;
+        }
+        .buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
         }
         .btn-clear {
             background: #f44336;
@@ -121,6 +126,15 @@
             <h1>📜 История сканирования</h1>
         </div>
         
+        <div class="buttons-container">
+            <button class="btn btn-back" onclick="goToScanner()">
+                ← Назад к сканеру
+            </button>
+            <button class="btn btn-clear" onclick="clearHistory()" id="clearBtn" style="display: none;">
+                🗑️ Очистить историю
+            </button>
+        </div>
+        
         <div id="historyList"></div>
         
         <div id="emptyState" class="empty-state" style="display: none;">
@@ -130,14 +144,6 @@
         </div>
         
         <div id="statusMessage" class="status-message"></div>
-        
-        <button class="btn btn-clear" onclick="clearHistory()" id="clearBtn" style="display: none;">
-            🗑️ Очистить историю
-        </button>
-        
-        <button class="btn btn-back" onclick="goToScanner()" style="margin-top: 16px;">
-            ← Назад к сканеру
-        </button>
     </div>
     
     <script>
