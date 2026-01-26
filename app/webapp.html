@@ -56,6 +56,54 @@
         .btn-history {
             background: rgb(150, 29, 245);
         }
+        .btn-checked {
+            background: #4caf50;
+        }
+        .stats-container {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .stats-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+            margin-bottom: 16px;
+        }
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--tg-theme-hint-color, #e0e0e0);
+        }
+        .stats-row:last-child {
+            border-bottom: none;
+        }
+        .stats-label {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #999999);
+            font-weight: 500;
+        }
+        .stats-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+        }
+        .stats-value.checked {
+            color: #4caf50;
+        }
+        .stats-value.unchecked {
+            color: #ff9800;
+        }
+        .stats-loading {
+            text-align: center;
+            padding: 12px;
+            color: var(--tg-theme-hint-color, #999999);
+            font-size: 14px;
+        }
         .status-message {
             padding: 16px;
             border-radius: 12px;
@@ -89,8 +137,19 @@
             <h1>🏭 Warehouse Scanner</h1>
             <p>Нажмите кнопку для сканирования QR-кода</p>
         </div>
+        
+        <div class="stats-container">
+            <div class="stats-title">📊 Статистика</div>
+            <div id="statsContent" class="stats-loading">
+                Загрузка статистики...
+            </div>
+        </div>
+        
         <button class="btn" id="scanBtn" onclick="scanQR()">
             📷 Сканировать QR
+        </button>
+        <button class="btn btn-checked" onclick="goToChecked()">
+            ✅ Отмеченное оборудование
         </button>
         <button class="btn btn-history" onclick="goToHistory()">
             📜 История сканирования
@@ -103,6 +162,7 @@
         tg.ready();
         tg.expand();
         
+        const API_BASE_URL = window.location.origin;
         const STORAGE_KEY = 'scan_history';
         const MAX_HISTORY_ITEMS = 100;
         
@@ -184,10 +244,57 @@
             }
         }
         
+        async function loadStats() {
+            const statsContent = document.getElementById('statsContent');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/items`);
+                
+                if (!response.ok) {
+                    throw new Error(`Ошибка сервера: ${response.status}`);
+                }
+                
+                const allItems = await response.json();
+                const checkedCount = allItems.filter(item => item.checkbox_t === true).length;
+                const uncheckedCount = allItems.length - checkedCount;
+                const totalCount = allItems.length;
+                
+                statsContent.innerHTML = `
+                    <div class="stats-row">
+                        <span class="stats-label">✅ Отмечено:</span>
+                        <span class="stats-value checked">${checkedCount}</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">⏳ Осталось:</span>
+                        <span class="stats-value unchecked">${uncheckedCount}</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">📦 Всего:</span>
+                        <span class="stats-value">${totalCount}</span>
+                    </div>
+                `;
+                
+            } catch (error) {
+                statsContent.innerHTML = `
+                    <div style="color: #c62828; font-size: 14px;">
+                        Ошибка загрузки статистики
+                    </div>
+                `;
+                console.error('Failed to load stats:', error);
+            }
+        }
+        
         function goToHistory() {
             const baseUrl = window.location.origin;
             window.location.href = `${baseUrl}/history`;
         }
+        
+        function goToChecked() {
+            const baseUrl = window.location.origin;
+            window.location.href = `${baseUrl}/checked`;
+        }
+        
+        loadStats();
     </script>
 </body>
 </html>
