@@ -13,11 +13,12 @@ bot_task = None
 webapp_html_bytes = None
 info_html_bytes = None
 history_html_bytes = None
+checked_html_bytes = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global bot_task, webapp_html_bytes, info_html_bytes, history_html_bytes
+    global bot_task, webapp_html_bytes, info_html_bytes, history_html_bytes, checked_html_bytes
     
     html_path = Path(__file__).parent / "webapp.html"
     with open(html_path, "rb") as f:
@@ -30,6 +31,10 @@ async def lifespan(app: FastAPI):
     history_path = Path(__file__).parent / "history.html"
     with open(history_path, "rb") as f:
         history_html_bytes = f.read()
+    
+    checked_path = Path(__file__).parent / "checked.html"
+    with open(checked_path, "rb") as f:
+        checked_html_bytes = f.read()
     
     bot_task = asyncio.create_task(start_polling())
     
@@ -201,3 +206,8 @@ async def info():
 @app.get("/history", response_class=HTMLResponse)
 async def history():
     return HTMLResponse(content=history_html_bytes.decode('utf-8'))
+
+
+@app.get("/checked", response_class=HTMLResponse)
+async def checked():
+    return HTMLResponse(content=checked_html_bytes.decode('utf-8'))

@@ -202,9 +202,9 @@
 <body>
     <div class="container">
         <div class="header">
-            <div style="width: 36px;"></div>
-            <h1>📦 Информация об оборудовании</h1>
             <button class="history-icon" onclick="goToHistory()" title="История сканирования">📜</button>
+            <h1>📦 Информация об оборудовании</h1>
+            <button class="history-icon" onclick="goToChecked()" title="Отмеченное оборудование">✅</button>
         </div>
         
         <div id="loadingState" class="status-message show loading">
@@ -603,6 +603,11 @@
         function goToHistory() {
             const baseUrl = window.location.origin;
             window.location.href = `${baseUrl}/history`;
+        }
+        
+        function goToChecked() {
+            const baseUrl = window.location.origin;
+            window.location.href = `${baseUrl}/checked`;
         }
         
         loadItem();

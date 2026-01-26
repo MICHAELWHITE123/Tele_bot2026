@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Отмеченное оборудование</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            min-height: 100vh;
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 24px; }
+        .header h1 { font-size: 24px; font-weight: 600; color: var(--tg-theme-text-color, #000000); margin-bottom: 8px; }
+        .checked-item {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid #4caf50;
+        }
+        .checked-item:active { opacity: 0.8; transform: scale(0.98); }
+        .checked-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .checked-item-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+        }
+        .checked-item-id {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #999999);
+            margin-top: 4px;
+        }
+        .checked-item-location {
+            font-size: 13px;
+            color: var(--tg-theme-hint-color, #999999);
+            margin-top: 4px;
+        }
+        .checked-item-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 6px;
+            background: #4caf50;
+            color: #ffffff;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--tg-theme-hint-color, #999999);
+        }
+        .empty-state-icon { font-size: 64px; margin-bottom: 16px; }
+        .empty-state-text { font-size: 16px; margin-bottom: 8px; }
+        .empty-state-subtext { font-size: 14px; }
+        .btn {
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+        .btn-back {
+            background: rgb(150, 29, 245);
+            color: #ffffff;
+        }
+        .btn:active { opacity: 0.8; }
+        .status-message {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-top: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            display: none;
+        }
+        .status-message.show { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .status-message.loading { background: #e3f2fd; color: #1565c0; }
+        .status-message.error { background: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Отмеченное оборудование</h1>
+        </div>
+        
+        <button class="btn btn-back" onclick="goToScanner()" style="margin-bottom: 24px;">
+            ← Назад к сканеру
+        </button>
+        
+        <div id="loadingState" class="status-message show loading">
+            Загрузка отмеченных элементов...
+        </div>
+        
+        <div id="checkedList"></div>
+        
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">✅</div>
+            <div class="empty-state-text">Нет отмеченных элементов</div>
+            <div class="empty-state-subtext">Отметьте оборудование, чтобы оно появилось здесь</div>
+        </div>
+        
+        <div id="statusMessage" class="status-message"></div>
+    </div>
+    
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        
+        const API_BASE_URL = window.location.origin;
+        
+        async function loadCheckedItems() {
+            const loadingState = document.getElementById('loadingState');
+            const checkedList = document.getElementById('checkedList');
+            const emptyState = document.getElementById('emptyState');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/items`);
+                
+                if (!response.ok) {
+                    throw new Error(`Ошибка сервера: ${response.status}`);
+                }
+                
+                const allItems = await response.json();
+                const checkedItems = allItems.filter(item => item.checkbox_t === true);
+                
+                loadingState.style.display = 'none';
+                
+                if (checkedItems.length === 0) {
+                    checkedList.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    return;
+                }
+                
+                emptyState.style.display = 'none';
+                
+                checkedList.innerHTML = checkedItems.map(item => {
+                    const itemName = item.data?.B || 'Оборудование';
+                    const itemLocation = item.data?.V || '—';
+                    const inventoryId = item.inventory_id || '—';
+                    
+                    return `
+                        <div class="checked-item" onclick="openItem('${inventoryId}')">
+                            <div class="checked-item-header">
+                                <div class="checked-item-title">${itemName}</div>
+                                <div class="checked-item-status">✅ Отмечено</div>
+                            </div>
+                            <div class="checked-item-id">🆔 ${inventoryId}</div>
+                            ${itemLocation !== '—' ? `<div class="checked-item-location">📍 ${itemLocation}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                loadingState.style.display = 'none';
+                showStatus('Ошибка при загрузке: ' + error.message, 'error');
+            }
+        }
+        
+        function openItem(inventoryId) {
+            const encodedId = encodeURIComponent(inventoryId.trim());
+            const baseUrl = window.location.origin;
+            window.location.href = `${baseUrl}/info?data=${encodedId}`;
+        }
+        
+        function goToScanner() {
+            const baseUrl = window.location.origin;
+            window.location.href = `${baseUrl}/webapp`;
+        }
+        
+        function showStatus(message, type = 'error') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message show ${type}`;
+            
+            setTimeout(() => {
+                statusEl.classList.remove('show');
+            }, 3000);
+        }
+        
+        loadCheckedItems();
+    </script>
+</body>
+</html>
