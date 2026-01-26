@@ -150,14 +150,14 @@
         </button>
         
         <div class="search-container">
-            <label for="categorySearch" class="search-label">🔍 Поиск по категории:</label>
+            <label for="searchInput" class="search-label">🔍 Поиск по категории или названию:</label>
             <input 
                 type="text" 
-                id="categorySearch" 
+                id="searchInput" 
                 class="search-input" 
-                placeholder="Введите категорию или выберите из списка..."
+                placeholder="Введите категорию, название оборудования или выберите из списка..."
                 list="categoriesList"
-                oninput="filterByCategory()"
+                oninput="filterItems()"
             />
             <datalist id="categoriesList"></datalist>
         </div>
@@ -210,8 +210,8 @@
             ).join('');
         }
         
-        function filterByCategory() {
-            const searchInput = document.getElementById('categorySearch');
+        function filterItems() {
+            const searchInput = document.getElementById('searchInput');
             const searchValue = searchInput.value.trim().toLowerCase();
             const checkedList = document.getElementById('checkedList');
             const emptyState = document.getElementById('emptyState');
@@ -221,7 +221,8 @@
             if (searchValue) {
                 filteredItems = allCheckedItems.filter(item => {
                     const category = (item.data?.A || '').toLowerCase();
-                    return category.includes(searchValue);
+                    const itemName = (item.data?.B || '').toLowerCase();
+                    return category.includes(searchValue) || itemName.includes(searchValue);
                 });
             }
             
@@ -286,7 +287,7 @@
                 loadingState.style.display = 'none';
                 
                 populateCategoriesList();
-                filterByCategory();
+                filterItems();
                 
             } catch (error) {
                 loadingState.style.display = 'none';
