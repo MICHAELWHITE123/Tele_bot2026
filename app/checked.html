@@ -103,6 +103,40 @@
         }
         .status-message.loading { background: #e3f2fd; color: #1565c0; }
         .status-message.error { background: #ffebee; color: #c62828; }
+        .search-container {
+            margin-bottom: 24px;
+        }
+        .search-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+            margin-bottom: 8px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid var(--tg-theme-hint-color, #e0e0e0);
+            border-radius: 8px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            box-sizing: border-box;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: var(--tg-theme-button-color, #3390ec);
+        }
+        .category-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            color: var(--tg-theme-text-color, #000000);
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -114,6 +148,19 @@
         <button class="btn btn-back" onclick="goToScanner()" style="margin-bottom: 24px;">
             ← Назад к сканеру
         </button>
+        
+        <div class="search-container">
+            <label for="categorySearch" class="search-label">🔍 Поиск по категории:</label>
+            <input 
+                type="text" 
+                id="categorySearch" 
+                class="search-input" 
+                placeholder="Введите категорию или выберите из списка..."
+                list="categoriesList"
+                oninput="filterByCategory()"
+            />
+            <datalist id="categoriesList"></datalist>
+        </div>
         
         <div id="loadingState" class="status-message show loading">
             Загрузка отмеченных элементов...
@@ -136,6 +183,89 @@
         tg.expand();
         
         const API_BASE_URL = window.location.origin;
+        let allCheckedItems = [];
+        let categories = [];
+        
+        function getUniqueCategories(items) {
+            const cats = new Set();
+            items.forEach(item => {
+                const category = item.data?.A || '';
+                if (category.trim()) {
+                    cats.add(category.trim());
+                }
+            });
+            return Array.from(cats).sort();
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function populateCategoriesList() {
+            const datalist = document.getElementById('categoriesList');
+            datalist.innerHTML = categories.map(cat => 
+                `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`
+            ).join('');
+        }
+        
+        function filterByCategory() {
+            const searchInput = document.getElementById('categorySearch');
+            const searchValue = searchInput.value.trim().toLowerCase();
+            const checkedList = document.getElementById('checkedList');
+            const emptyState = document.getElementById('emptyState');
+            
+            let filteredItems = allCheckedItems;
+            
+            if (searchValue) {
+                filteredItems = allCheckedItems.filter(item => {
+                    const category = (item.data?.A || '').toLowerCase();
+                    return category.includes(searchValue);
+                });
+            }
+            
+            if (filteredItems.length === 0) {
+                checkedList.innerHTML = '';
+                if (searchValue) {
+                    emptyState.innerHTML = `
+                        <div class="empty-state-icon">🔍</div>
+                        <div class="empty-state-text">Ничего не найдено</div>
+                        <div class="empty-state-subtext">Попробуйте другую категорию</div>
+                    `;
+                } else {
+                    emptyState.innerHTML = `
+                        <div class="empty-state-icon">✅</div>
+                        <div class="empty-state-text">Нет отмеченных элементов</div>
+                        <div class="empty-state-subtext">Отметьте оборудование, чтобы оно появилось здесь</div>
+                    `;
+                }
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            checkedList.innerHTML = filteredItems.map(item => {
+                const itemName = escapeHtml(item.data?.B || 'Оборудование');
+                const itemLocation = escapeHtml(item.data?.V || '—');
+                const inventoryId = escapeHtml(item.inventory_id || '—');
+                const category = escapeHtml(item.data?.A || '');
+                const encodedInventoryId = encodeURIComponent(item.inventory_id || '');
+                
+                return `
+                    <div class="checked-item" onclick="openItem('${encodedInventoryId}')">
+                        <div class="checked-item-header">
+                            <div class="checked-item-title">${itemName}</div>
+                            <div class="checked-item-status">✅ Отмечено</div>
+                        </div>
+                        ${category ? `<div class="category-badge">📁 ${category}</div>` : ''}
+                        <div class="checked-item-id">🆔 ${inventoryId}</div>
+                        ${itemLocation !== '—' ? `<div class="checked-item-location">📍 ${itemLocation}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
         
         async function loadCheckedItems() {
             const loadingState = document.getElementById('loadingState');
@@ -150,34 +280,13 @@
                 }
                 
                 const allItems = await response.json();
-                const checkedItems = allItems.filter(item => item.checkbox_t === true);
+                allCheckedItems = allItems.filter(item => item.checkbox_t === true);
+                categories = getUniqueCategories(allCheckedItems);
                 
                 loadingState.style.display = 'none';
                 
-                if (checkedItems.length === 0) {
-                    checkedList.innerHTML = '';
-                    emptyState.style.display = 'block';
-                    return;
-                }
-                
-                emptyState.style.display = 'none';
-                
-                checkedList.innerHTML = checkedItems.map(item => {
-                    const itemName = item.data?.B || 'Оборудование';
-                    const itemLocation = item.data?.V || '—';
-                    const inventoryId = item.inventory_id || '—';
-                    
-                    return `
-                        <div class="checked-item" onclick="openItem('${inventoryId}')">
-                            <div class="checked-item-header">
-                                <div class="checked-item-title">${itemName}</div>
-                                <div class="checked-item-status">✅ Отмечено</div>
-                            </div>
-                            <div class="checked-item-id">🆔 ${inventoryId}</div>
-                            ${itemLocation !== '—' ? `<div class="checked-item-location">📍 ${itemLocation}</div>` : ''}
-                        </div>
-                    `;
-                }).join('');
+                populateCategoriesList();
+                filterByCategory();
                 
             } catch (error) {
                 loadingState.style.display = 'none';
@@ -186,9 +295,8 @@
         }
         
         function openItem(inventoryId) {
-            const encodedId = encodeURIComponent(inventoryId.trim());
             const baseUrl = window.location.origin;
-            window.location.href = `${baseUrl}/info?data=${encodedId}`;
+            window.location.href = `${baseUrl}/info?data=${inventoryId}`;
         }
         
         function goToScanner() {
