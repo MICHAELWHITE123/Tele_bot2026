@@ -294,7 +294,7 @@
         const MAX_HISTORY_ITEMS = 100;
         let currentItem = null;
         
-        function saveToHistory(inventoryId, itemName) {
+        function saveToHistory(inventoryId, itemName, isChecked = false) {
             try {
                 const historyJson = localStorage.getItem(STORAGE_KEY);
                 const history = historyJson ? JSON.parse(historyJson) : [];
@@ -302,7 +302,8 @@
                 const newItem = {
                     inventory_id: inventoryId,
                     name: itemName || 'Оборудование',
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    checkbox_t: isChecked
                 };
                 
                 const existingIndex = history.findIndex(item => item.inventory_id === inventoryId);
@@ -443,7 +444,7 @@
                 
                 const item = await response.json();
                 displayItem(item);
-                saveToHistory(item.inventory_id, item.data?.B);
+                saveToHistory(item.inventory_id, item.data?.B, item.checkbox_t || false);
                 
             } catch (error) {
                 showError('Ошибка при загрузке информации: ' + error.message);
@@ -475,6 +476,7 @@
                 
                 currentItem.checkbox_t = true;
                 displayItem(currentItem);
+                saveToHistory(currentItem.inventory_id, currentItem.data?.B, true);
                 showStatus('✅ Отметка установлена', 'success');
                 
             } catch (error) {
@@ -509,6 +511,7 @@
                 
                 currentItem.checkbox_t = false;
                 displayItem(currentItem);
+                saveToHistory(currentItem.inventory_id, currentItem.data?.B, false);
                 showStatus('❌ Отметка снята', 'success');
                 
             } catch (error) {
@@ -565,6 +568,7 @@
                     if (checkResponse.ok) {
                         currentItem.checkbox_t = true;
                         displayItem(currentItem);
+                        saveToHistory(currentItem.inventory_id, currentItem.data?.B, true);
                         showStatus('✅ Номер сохранен и отметка установлена', 'success');
                     } else {
                         showStatus('✅ Номер сохранен', 'success');

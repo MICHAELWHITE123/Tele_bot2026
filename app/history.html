@@ -48,6 +48,22 @@
             color: var(--tg-theme-hint-color, #999999);
             margin-top: 4px;
         }
+        .history-item-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+        .history-item-status.checked {
+            background: #4caf50;
+            color: #ffffff;
+        }
+        .history-item-status.unchecked {
+            background: #ff9800;
+            color: #ffffff;
+        }
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -198,6 +214,10 @@
             historyList.innerHTML = history.map((item, index) => {
                 const time = formatTime(item.timestamp);
                 const fullTime = formatFullTime(item.timestamp);
+                // Проверяем статус отметки (для старых записей может быть undefined)
+                const isChecked = item.checkbox_t === true;
+                const statusClass = isChecked ? 'checked' : 'unchecked';
+                const statusText = isChecked ? '✅ Отмечено' : '⏳ Не отмечено';
                 return `
                     <div class="history-item" onclick="openItem('${item.inventory_id}')">
                         <div class="history-item-header">
@@ -205,6 +225,7 @@
                             <div class="history-item-time" title="${fullTime}">${time}</div>
                         </div>
                         <div class="history-item-id">🆔 ${item.inventory_id}</div>
+                        <div class="history-item-status ${statusClass}">${statusText}</div>
                     </div>
                 `;
             }).join('');
