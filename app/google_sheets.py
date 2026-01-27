@@ -50,10 +50,21 @@ class GoogleSheetsClient:
         items = []
         for idx, row in enumerate(rows):
             if len(row) > 10:
+                # Checkbox_t is None if checkbox cell is empty or doesn't exist
+                # Only True if explicitly "TRUE", False if explicitly "FALSE"
+                checkbox_value = None
+                if len(row) > 19 and row[19]:
+                    checkbox_str = str(row[19]).strip().upper()
+                    if checkbox_str == "TRUE":
+                        checkbox_value = True
+                    elif checkbox_str == "FALSE":
+                        checkbox_value = False
+                    # If checkbox exists but is not TRUE/FALSE, leave as None
+                
                 item = {
                     "row_index": idx + 1,
                     "inventory_id": row[10] if len(row) > 10 else "",
-                    "checkbox_t": row[19].upper() == "TRUE" if len(row) > 19 and row[19] else False,
+                    "checkbox_t": checkbox_value,
                     "data": {
                         "A": row[0] if len(row) > 0 else "",
                         "B": row[1] if len(row) > 1 else "",

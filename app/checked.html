@@ -281,6 +281,7 @@
                 }
                 
                 const allItems = await response.json();
+                // Filter out items without checkbox (checkbox_t is None) and only get checked items
                 allCheckedItems = allItems.filter(item => item.checkbox_t === true);
                 categories = getUniqueCategories(allCheckedItems);
                 

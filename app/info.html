@@ -358,11 +358,15 @@
             }
             
             const statusEl = document.getElementById('itemStatus');
-            if (item.checkbox_t) {
+            if (item.checkbox_t === true) {
                 statusEl.textContent = 'Отмечено';
                 statusEl.className = 'item-status checked';
-            } else {
+            } else if (item.checkbox_t === false) {
                 statusEl.textContent = 'Не отмечено';
+                statusEl.className = 'item-status unchecked';
+            } else {
+                // checkbox_t is None - no checkbox exists
+                statusEl.textContent = 'Нет чекбокса';
                 statusEl.className = 'item-status unchecked';
             }
             

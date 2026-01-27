@@ -381,9 +381,11 @@
                 }
                 
                 const items = await response.json();
-                currentItems = items;
-                checkedItems = items.filter(item => item.checkbox_t === true);
-                uncheckedItems = items.filter(item => item.checkbox_t !== true);
+                // Filter out items without checkbox (checkbox_t is None)
+                const itemsWithCheckbox = items.filter(item => item.checkbox_t !== null && item.checkbox_t !== undefined);
+                currentItems = itemsWithCheckbox;
+                checkedItems = itemsWithCheckbox.filter(item => item.checkbox_t === true);
+                uncheckedItems = itemsWithCheckbox.filter(item => item.checkbox_t === false);
                 
                 updateStats();
                 renderItems();

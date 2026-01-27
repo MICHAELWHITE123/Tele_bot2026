@@ -225,16 +225,18 @@ async def location():
 
 @app.get("/locations", response_model=list[str])
 async def get_locations():
-    """Get list of all unique storage locations."""
+    """Get list of all unique storage locations. Only includes locations with items that have checkbox."""
     try:
         client = get_sheets_client()
         items = client.get_all_items()
         
+        # Only consider items with checkbox (checkbox_t is not None)
         locations = set()
         for item in items:
-            location = item.get("data", {}).get("V", "").strip()
-            if location:
-                locations.add(location)
+            if item.get("checkbox_t") is not None:
+                location = item.get("data", {}).get("V", "").strip()
+                if location:
+                    locations.add(location)
         
         return sorted(list(locations))
     except Exception:
@@ -246,7 +248,7 @@ async def get_locations():
 
 @app.get("/locations/{location}/items", response_model=list[dict])
 async def get_items_by_location(location: str):
-    """Get all items for a specific storage location."""
+    """Get all items for a specific storage location. Only returns items with checkbox."""
     try:
         from urllib.parse import unquote
         client = get_sheets_client()
@@ -254,9 +256,11 @@ async def get_items_by_location(location: str):
         
         # FastAPI automatically URL-decodes path parameters, but we'll ensure it's decoded
         location_decoded = unquote(location)
+        # Filter by location and exclude items without checkbox (checkbox_t is None)
         filtered_items = [
             item for item in items
             if item.get("data", {}).get("V", "").strip() == location_decoded
+            and item.get("checkbox_t") is not None
         ]
         
         return filtered_items

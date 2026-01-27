@@ -258,9 +258,11 @@
                 }
                 
                 const allItems = await response.json();
-                const checkedCount = allItems.filter(item => item.checkbox_t === true).length;
-                const uncheckedCount = allItems.length - checkedCount;
-                const totalCount = allItems.length;
+                // Filter out items without checkbox (checkbox_t is None)
+                const itemsWithCheckbox = allItems.filter(item => item.checkbox_t !== null && item.checkbox_t !== undefined);
+                const checkedCount = itemsWithCheckbox.filter(item => item.checkbox_t === true).length;
+                const uncheckedCount = itemsWithCheckbox.filter(item => item.checkbox_t === false).length;
+                const totalCount = itemsWithCheckbox.length;
                 
                 statsContent.innerHTML = `
                     <div class="stats-row">
