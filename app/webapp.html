@@ -148,6 +148,9 @@
         <button class="btn" id="scanBtn" onclick="scanQR()">
             📷 Сканировать QR
         </button>
+        <button class="btn btn-location" onclick="goToLocation()" style="background: #2196f3;">
+            📍 Места хранения
+        </button>
         <button class="btn btn-checked" onclick="goToChecked()">
             ✅ Отмеченное оборудование
         </button>
@@ -292,6 +295,11 @@
         function goToChecked() {
             const baseUrl = window.location.origin;
             window.location.href = `${baseUrl}/checked`;
+        }
+        
+        function goToLocation() {
+            const baseUrl = window.location.origin;
+            window.location.href = `${baseUrl}/location`;
         }
         
         loadStats();

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Места хранения</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            min-height: 100vh;
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        .header { 
+            text-align: center; 
+            margin-bottom: 24px; 
+        }
+        .header h1 { 
+            font-size: 24px; 
+            font-weight: 600; 
+            color: var(--tg-theme-text-color, #000000); 
+            margin-bottom: 8px; 
+        }
+        .location-selector {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .location-selector label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+            margin-bottom: 12px;
+        }
+        .location-select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid var(--tg-theme-hint-color, #e0e0e0);
+            border-radius: 8px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            box-sizing: border-box;
+            cursor: pointer;
+        }
+        .location-select:focus {
+            outline: none;
+            border-color: var(--tg-theme-button-color, #3390ec);
+        }
+        .stats-container {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .stats-container.show {
+            display: block;
+        }
+        .stats-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stat-card {
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .stat-value.checked {
+            color: #4caf50;
+        }
+        .stat-value.unchecked {
+            color: #ff9800;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #999999);
+            font-weight: 500;
+        }
+        .tabs-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            color: var(--tg-theme-text-color, #000000);
+        }
+        .tab-btn.active {
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #ffffff);
+        }
+        .tab-btn:active {
+            opacity: 0.8;
+        }
+        .items-list {
+            display: none;
+        }
+        .items-list.show {
+            display: block;
+        }
+        .item-card {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .item-card:active {
+            opacity: 0.8;
+            transform: scale(0.98);
+        }
+        .item-card.checked {
+            border-left: 4px solid #4caf50;
+        }
+        .item-card.unchecked {
+            border-left: 4px solid #ff9800;
+        }
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .item-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+        }
+        .item-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .item-status.checked {
+            background: #4caf50;
+            color: #ffffff;
+        }
+        .item-status.unchecked {
+            background: #ff9800;
+            color: #ffffff;
+        }
+        .item-id {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #999999);
+            margin-top: 4px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--tg-theme-hint-color, #999999);
+        }
+        .empty-state-icon { 
+            font-size: 64px; 
+            margin-bottom: 16px; 
+        }
+        .empty-state-text { 
+            font-size: 16px; 
+            margin-bottom: 8px; 
+        }
+        .empty-state-subtext { 
+            font-size: 14px; 
+        }
+        .btn {
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            margin-top: 24px;
+        }
+        .btn-back {
+            background: rgb(150, 29, 245);
+            color: #ffffff;
+        }
+        .btn:active { 
+            opacity: 0.8; 
+        }
+        .status-message {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-top: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            display: none;
+        }
+        .status-message.show { 
+            display: block; 
+            animation: fadeIn 0.3s ease-out; 
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .status-message.loading { 
+            background: #e3f2fd; 
+            color: #1565c0; 
+        }
+        .status-message.error { 
+            background: #ffebee; 
+            color: #c62828; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📍 Места хранения</h1>
+        </div>
+        
+        <div class="location-selector">
+            <label for="locationSelect">Выберите место хранения:</label>
+            <select id="locationSelect" class="location-select" onchange="onLocationChange()">
+                <option value="">— Выберите место —</option>
+            </select>
+        </div>
+        
+        <div id="statsContainer" class="stats-container">
+            <div class="stats-title" id="statsTitle">Статистика</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value checked" id="checkedCount">0</div>
+                    <div class="stat-label">✅ Проклеено</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value unchecked" id="uncheckedCount">0</div>
+                    <div class="stat-label">⏳ Не проклеено</div>
+                </div>
+            </div>
+            
+            <div class="tabs-container">
+                <button class="tab-btn active" onclick="showTab('checked')" id="tabChecked">
+                    ✅ Проклеено (<span id="tabCheckedCount">0</span>)
+                </button>
+                <button class="tab-btn" onclick="showTab('unchecked')" id="tabUnchecked">
+                    ⏳ Не проклеено (<span id="tabUncheckedCount">0</span>)
+                </button>
+            </div>
+            
+            <div id="checkedList" class="items-list show"></div>
+            <div id="uncheckedList" class="items-list"></div>
+            
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📦</div>
+                <div class="empty-state-text">Нет элементов</div>
+            </div>
+        </div>
+        
+        <div id="loadingState" class="status-message show loading">
+            Загрузка мест хранения...
+        </div>
+        
+        <button class="btn btn-back" onclick="goToScanner()">
+            ← Назад к сканеру
+        </button>
+        
+        <div id="statusMessage" class="status-message"></div>
+    </div>
+    
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        
+        const API_BASE_URL = window.location.origin;
+        let allLocations = [];
+        let currentLocation = '';
+        let currentItems = [];
+        let checkedItems = [];
+        let uncheckedItems = [];
+        let activeTab = 'checked';
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+        
+        async function loadLocations() {
+            const loadingState = document.getElementById('loadingState');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/locations`);
+                
+                if (!response.ok) {
+                    throw new Error(`Ошибка сервера: ${response.status}`);
+                }
+                
+                const locations = await response.json();
+                allLocations = locations.sort();
+                
+                const select = document.getElementById('locationSelect');
+                select.innerHTML = '<option value="">— Выберите место —</option>';
+                allLocations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location;
+                    option.textContent = location;
+                    select.appendChild(option);
+                });
+                
+                loadingState.style.display = 'none';
+                
+            } catch (error) {
+                loadingState.style.display = 'none';
+                showStatus('Ошибка при загрузке мест: ' + error.message, 'error');
+            }
+        }
+        
+        async function onLocationChange() {
+            const select = document.getElementById('locationSelect');
+            const location = select.value;
+            const statsContainer = document.getElementById('statsContainer');
+            
+            if (!location) {
+                statsContainer.classList.remove('show');
+                currentLocation = '';
+                return;
+            }
+            
+            currentLocation = location;
+            statsContainer.classList.add('show');
+            document.getElementById('statsTitle').textContent = `Статистика: ${escapeHtml(location)}`;
+            
+            await loadLocationStats(location);
+        }
+        
+        async function loadLocationStats(location) {
+            const loadingState = document.getElementById('loadingState');
+            loadingState.style.display = 'block';
+            loadingState.textContent = 'Загрузка статистики...';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/locations/${encodeURIComponent(location)}/items`);
+                
+                if (!response.ok) {
+                    throw new Error(`Ошибка сервера: ${response.status}`);
+                }
+                
+                const items = await response.json();
+                currentItems = items;
+                checkedItems = items.filter(item => item.checkbox_t === true);
+                uncheckedItems = items.filter(item => item.checkbox_t !== true);
+                
+                updateStats();
+                renderItems();
+                
+                loadingState.style.display = 'none';
+                
+            } catch (error) {
+                loadingState.style.display = 'none';
+                showStatus('Ошибка при загрузке статистики: ' + error.message, 'error');
+            }
+        }
+        
+        function updateStats() {
+            document.getElementById('checkedCount').textContent = checkedItems.length;
+            document.getElementById('uncheckedCount').textContent = uncheckedItems.length;
+            document.getElementById('tabCheckedCount').textContent = checkedItems.length;
+            document.getElementById('tabUncheckedCount').textContent = uncheckedItems.length;
+        }
+        
+        function showTab(tab) {
+            activeTab = tab;
+            
+            document.getElementById('tabChecked').classList.toggle('active', tab === 'checked');
+            document.getElementById('tabUnchecked').classList.toggle('active', tab === 'unchecked');
+            
+            document.getElementById('checkedList').classList.toggle('show', tab === 'checked');
+            document.getElementById('uncheckedList').classList.toggle('show', tab === 'unchecked');
+            
+            renderItems();
+        }
+        
+        function renderItems() {
+            const items = activeTab === 'checked' ? checkedItems : uncheckedItems;
+            const listId = activeTab === 'checked' ? 'checkedList' : 'uncheckedList';
+            const listEl = document.getElementById(listId);
+            const emptyState = document.getElementById('emptyState');
+            
+            if (items.length === 0) {
+                listEl.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            listEl.innerHTML = items.map(item => {
+                const itemName = escapeHtml(item.data?.B || 'Оборудование');
+                const inventoryId = escapeHtml(item.inventory_id || '—');
+                const encodedInventoryId = encodeURIComponent(item.inventory_id || '');
+                const isChecked = item.checkbox_t === true;
+                const statusClass = isChecked ? 'checked' : 'unchecked';
+                const statusText = isChecked ? '✅ Проклеено' : '⏳ Не проклеено';
+                
+                return `
+                    <div class="item-card ${statusClass}" onclick="openItem('${encodedInventoryId}')">
+                        <div class="item-header">
+                            <div class="item-title">${itemName}</div>
+                            <div class="item-status ${statusClass}">${statusText}</div>
+                        </div>
+                        <div class="item-id">🆔 ${inventoryId}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function openItem(inventoryId) {
+            const baseUrl = window.location.origin;
+            window.location.href = `${baseUrl}/info?data=${inventoryId}`;
+        }
+        
+        function goToScanner() {
+            const baseUrl = window.location.origin;
+            window.location.href = `${baseUrl}/webapp`;
+        }
+        
+        function showStatus(message, type = 'error') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message show ${type}`;
+            
+            setTimeout(() => {
+                statusEl.classList.remove('show');
+            }, 3000);
+        }
+        
+        loadLocations();
+    </script>
+</body>
+</html>

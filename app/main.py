@@ -14,11 +14,12 @@ webapp_html_bytes = None
 info_html_bytes = None
 history_html_bytes = None
 checked_html_bytes = None
+location_html_bytes = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global bot_task, webapp_html_bytes, info_html_bytes, history_html_bytes, checked_html_bytes
+    global bot_task, webapp_html_bytes, info_html_bytes, history_html_bytes, checked_html_bytes, location_html_bytes
     
     html_path = Path(__file__).parent / "webapp.html"
     with open(html_path, "rb") as f:
@@ -35,6 +36,10 @@ async def lifespan(app: FastAPI):
     checked_path = Path(__file__).parent / "checked.html"
     with open(checked_path, "rb") as f:
         checked_html_bytes = f.read()
+    
+    location_path = Path(__file__).parent / "location.html"
+    with open(location_path, "rb") as f:
+        location_html_bytes = f.read()
     
     bot_task = asyncio.create_task(start_polling())
     
@@ -211,3 +216,52 @@ async def history():
 @app.get("/checked", response_class=HTMLResponse)
 async def checked():
     return HTMLResponse(content=checked_html_bytes.decode('utf-8'))
+
+
+@app.get("/location", response_class=HTMLResponse)
+async def location():
+    return HTMLResponse(content=location_html_bytes.decode('utf-8'))
+
+
+@app.get("/locations", response_model=list[str])
+async def get_locations():
+    """Get list of all unique storage locations."""
+    try:
+        client = get_sheets_client()
+        items = client.get_all_items()
+        
+        locations = set()
+        for item in items:
+            location = item.get("data", {}).get("V", "").strip()
+            if location:
+                locations.add(location)
+        
+        return sorted(list(locations))
+    except Exception:
+        return JSONResponse(
+            status_code=500,
+            content={"error": "internal server error"}
+        )
+
+
+@app.get("/locations/{location}/items", response_model=list[dict])
+async def get_items_by_location(location: str):
+    """Get all items for a specific storage location."""
+    try:
+        from urllib.parse import unquote
+        client = get_sheets_client()
+        items = client.get_all_items()
+        
+        # FastAPI automatically URL-decodes path parameters, but we'll ensure it's decoded
+        location_decoded = unquote(location)
+        filtered_items = [
+            item for item in items
+            if item.get("data", {}).get("V", "").strip() == location_decoded
+        ]
+        
+        return filtered_items
+    except Exception:
+        return JSONResponse(
+            status_code=500,
+            content={"error": "internal server error"}
+        )
